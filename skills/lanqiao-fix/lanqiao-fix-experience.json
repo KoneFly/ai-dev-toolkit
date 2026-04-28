@@ -1,0 +1,1814 @@
+{
+  "version": 1,
+  "stats": {
+    "total_sessions": 2,
+    "total_fixes": 24,
+    "total_patterns": 74,
+    "last_updated": "2026-03-14"
+  },
+  "patterns": [
+    {
+      "id": "SEED-001",
+      "name": "寄存器位操作方向错误",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "GPIO",
+        "SPI",
+        "I2C"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "寄存器掩码或位域操作方向错误导致外设配置异常",
+      "signature": "寄存器操作中使用了错误的掩码或位移方向",
+      "fix_template": {
+        "method": "核对数据手册确认正确的掩码和位操作方向",
+        "example": "GPIO->BSRR = (1 << pin); // 而非 GPIO->ODR |= ..."
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-002",
+      "name": "DMA长度参数与缓冲区不匹配",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "DMA",
+        "UART"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "DMA传输长度与实际缓冲区大小不一致，导致溢出或数据截断",
+      "signature": "DMA配置中长度参数与数组/缓冲区定义大小不相等",
+      "fix_template": {
+        "method": "确保DMA长度参数等于缓冲区实际大小",
+        "example": "HAL_UART_Receive_DMA(&huart, buf, sizeof(buf));"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-003",
+      "name": "字符串格式不精确匹配题目",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "LCD",
+        "格式错误",
+        "格式显示"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "多余空格、\\r\\n、对齐问题会导致判题失败",
+      "signature": "sprintf/printf输出格式与题目样例存在细微差异（空格、换行、对齐）",
+      "fix_template": {
+        "method": "逐字符对照题目样例，检查空格、换行符、对齐",
+        "example": "sprintf(buf, \"(%d,%d)\", x, y); // 注意逗号后无空格"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-004",
+      "name": "PWM初始占空比为0导致输入捕获失效",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "输入捕获"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "PWM初始占空比设为0时，输入捕获检测不到有效边沿",
+      "signature": "PWM初始化后占空比为0且同时使用输入捕获功能",
+      "fix_template": {
+        "method": "PWM初始化后设置非零占空比",
+        "example": "__HAL_TIM_SET_COMPARE(&htim, TIM_CHANNEL_x, initial_duty);"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-005",
+      "name": "除法运算缺除零保护",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "频率计算等除法运算分母可能为0导致HardFault",
+      "signature": "除法运算的分母变量可能为0且无保护判断",
+      "fix_template": {
+        "method": "在除法前加分母非零判断",
+        "example": "if(period > 0) freq = 1000000 / period; else freq = 0;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-006",
+      "name": "定时器分频/重装值配置错误",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "定时器分频系数或重装载值计算错误影响时基精度",
+      "signature": "定时器配置参数与目标频率/周期不匹配",
+      "fix_template": {
+        "method": "重新计算: freq = PCLK / (PSC+1) / (ARR+1)",
+        "example": "htim.Init.Prescaler = 7200 - 1; htim.Init.Period = 10000 - 1; // 72MHz→1Hz"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-007",
+      "name": "状态/场景切换时旧外设输出未清除",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "LED",
+        "状态机"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "切换LED场景前未先全灭，导致多个LED同时亮",
+      "signature": "状态切换代码中无外设复位/清零操作",
+      "fix_template": {
+        "method": "在进入新状态前先清除所有旧输出",
+        "example": "LED_AllOff(); // 切换前先全灭\nswitch(new_state) { ... }"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-008",
+      "name": "状态机转换遗漏关联变量重置",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "状态机",
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "清零某状态变量但忘记同步清零关联变量（如清零total_distance忘了清time_ms）",
+      "signature": "状态重置函数中部分关联变量未同步处理",
+      "fix_template": {
+        "method": "重置操作时列出所有关联变量，逐个检查",
+        "example": "total_distance = 0; time_ms = 0; step_count = 0; // 全部关联变量"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-009",
+      "name": "外设输出未与软件逻辑状态联动",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "DAC",
+        "状态机"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "设备空闲/暂停时PWM/DAC仍有输出，应在非工作态置零",
+      "signature": "非工作态时外设输出端未置零",
+      "fix_template": {
+        "method": "在空闲/暂停状态处理中显式关闭外设输出",
+        "example": "if(state != Busy) { __HAL_TIM_SET_COMPARE(&htim, ch, 0); }"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-010",
+      "name": "跨文件共享变量缺少extern声明",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "通用"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "一处定义但头文件缺extern，导致链接失败或各文件操作独立副本",
+      "signature": "多个.c文件使用同名全局变量但无extern关联",
+      "fix_template": {
+        "method": "在.c文件中定义，在.h文件中用extern声明",
+        "example": "// xxx.c: uint8_t flag = 0;\n// xxx.h: extern uint8_t flag;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-011",
+      "name": "LCD行号/列号索引偏移",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "LCD",
+        "格式显示"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "LCD显示行号或列号存在off-by-one偏移",
+      "signature": "LCD_DisplayStringLine参数与实际显示位置不对应",
+      "fix_template": {
+        "method": "核对LCD库API的行号起始值（0还是1）",
+        "example": "LCD_DisplayStringLine(Line0, ...); // 确认Line0对应第1行"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-012",
+      "name": "LED编号映射错误",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "LED"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "LED编号映射与实际硬件不对应（如ucled[1]控制LD2而非LD1）",
+      "signature": "ucled数组索引与实际LED编号存在偏移",
+      "fix_template": {
+        "method": "核对原理图确认LED编号与GPIO引脚映射关系",
+        "example": "ucled[0] = LD1, ucled[1] = LD2 // 确认映射"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-013",
+      "name": "LED闪烁未在进入时立即点亮",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "LED",
+        "闪烁"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "进入闪烁模式时等待第一个周期才点亮，而非立即点亮",
+      "signature": "闪烁模式入口处无初始点亮操作",
+      "fix_template": {
+        "method": "进入闪烁模式时先执行一次点亮",
+        "example": "LED_On(led_num); blink_tick = HAL_GetTick(); blink_state = 1;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-014",
+      "name": "I2C设备地址错误",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "I2C",
+        "EEPROM"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "EEPROM等I2C设备读/写地址混淆（如0xA0 vs 0xA1）",
+      "signature": "I2C设备地址常量与数据手册不一致",
+      "fix_template": {
+        "method": "查阅数据手册确认7位地址和读/写位",
+        "example": "#define EEPROM_ADDR 0xA0 // 写地址; 读地址=0xA1"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-015",
+      "name": "ADC换算系数错误",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "ADC"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "ADC参考电压或分辨率位数使用错误导致换算结果偏差",
+      "signature": "ADC原始值到实际值的换算公式系数不正确",
+      "fix_template": {
+        "method": "确认参考电压和分辨率: voltage = raw * Vref / (2^bits - 1)",
+        "example": "float voltage = (float)adc_raw * 3.3f / 4095.0f; // 12位ADC, 3.3V参考"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-016",
+      "name": "动态数组增删后索引未同步",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "数据存储",
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "删除当前目标之前的元素后current_index未减1，导致跳过目标",
+      "signature": "数组删除操作后索引变量未做相应调整",
+      "fix_template": {
+        "method": "删除元素后检查并调整所有引用该数组的索引",
+        "example": "if(del_idx <= current_idx) current_idx--;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-017",
+      "name": "迭代计算中截断整数替代浮点导致漂移",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "到达途经点时pos应赋精确目标值而非截断的当前位置，导致累积误差",
+      "signature": "迭代步进计算中使用截断整数值而非精确浮点目标值",
+      "fix_template": {
+        "method": "到达关键点时赋精确目标值而非当前计算值",
+        "example": "if(reached) pos = target_pos; // 用精确目标值而非截断的计算值"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-018",
+      "name": "闪烁计时语义错误（间隔vs周期）",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "LED",
+        "闪烁",
+        "计时"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "混淆\"间隔\"(半周期)与\"周期\"(完整亮灭)，如\"间隔0.2s\"指亮0.2s灭0.2s，总周期0.4s",
+      "signature": "闪烁定时参数与题目描述的时间关系不匹配",
+      "fix_template": {
+        "method": "明确题目中时间术语的语义：间隔=单次状态持续=半周期",
+        "example": "// 间隔0.2s → 亮200ms灭200ms → toggle周期200ms"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-019",
+      "name": "长短按判断逻辑过于复杂",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "按键"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "应使用状态机简化长短按判断，而非多层嵌套if/else",
+      "signature": "按键处理中嵌套多层if/else判断按压时长",
+      "fix_template": {
+        "method": "用状态机实现：Idle→Pressing→ShortRelease/LongHold",
+        "example": "enum { KEY_IDLE, KEY_PRESSING, KEY_LONG }; // 状态机简化"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-020",
+      "name": "边界条件闭/开区间错误",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "比较条件中<与<=、>与>=使用错误，边界值判断不符合题意",
+      "signature": "边界值比较时区间端点包含/排除与题意不一致",
+      "fix_template": {
+        "method": "对照题目明确边界是\"大于\"还是\"大于等于\"",
+        "example": "if(value >= threshold) // 确认是>还是>="
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-021",
+      "name": "循环体内外重复输出操作",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "循环内已printf的内容，循环后又printf一次导致重复输出",
+      "signature": "循环体内和循环体外存在相同的输出调用",
+      "fix_template": {
+        "method": "检查循环前后是否有与循环体重复的输出语句",
+        "example": "// 删除循环后多余的printf，仅在循环内输出"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-022",
+      "name": "循环步进量与数据布局不匹配",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "如二维坐标每元素含x,y，遍历应i++而非i+=2",
+      "signature": "循环增量与数据结构元素大小/布局不一致",
+      "fix_template": {
+        "method": "确认数据结构布局后调整循环步进量",
+        "example": "for(int i=0; i<count; i++) { use(arr[i].x, arr[i].y); } // 结构体数组用i++"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-023",
+      "name": "环形缓冲区读写指针共用导致覆盖",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "DMA"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "环形缓冲区读写指针共用同一变量导致数据被覆盖",
+      "signature": "环形缓冲区仅有一个索引变量同时用于读写",
+      "fix_template": {
+        "method": "分离读指针和写指针",
+        "example": "uint16_t rd_idx = 0, wr_idx = 0; // 独立读写指针"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-024",
+      "name": "GPIO/I2C/SPI外设初始化缺失",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "GPIO",
+        "I2C",
+        "SPI",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "使用外设前未进行初始化配置，外设无法正常工作",
+      "signature": "外设使用代码存在但对应MX_xxx_Init()未被调用",
+      "fix_template": {
+        "method": "在main()初始化段确保所有使用的外设都已初始化",
+        "example": "MX_I2C1_Init(); // 确保在使用前已调用"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-025",
+      "name": "浮点运算赋值给整数变量导致截断",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "uint32_t v = raw * 3.3f / 4096 结果0.x被截断为0",
+      "signature": "浮点运算结果直接赋值给整数类型变量",
+      "fix_template": {
+        "method": "用float变量接收浮点运算结果",
+        "example": "float voltage = (float)adc_raw * 3.3f / 4096.0f;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-026",
+      "name": "循环边界错误（off-by-one）",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "循环条件中<与<=使用错误，多迭代或少迭代一次",
+      "signature": "for循环的边界条件与数组大小或题目范围不一致",
+      "fix_template": {
+        "method": "明确循环范围：[0,n)用<n，[0,n]用<=n",
+        "example": "for(int i=0; i<n; i++) // n个元素"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-027",
+      "name": "未初始化变量",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "局部变量未初始化导致随机值参与计算",
+      "signature": "局部变量声明后未赋初值即使用",
+      "fix_template": {
+        "method": "声明时立即初始化",
+        "example": "int sum = 0; int cnt = 0;"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-028",
+      "name": "scanf/printf格式串与变量类型不匹配",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "格式错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "%d读long long或%lld读int导致未定义行为",
+      "signature": "格式符宽度与实际变量类型不一致",
+      "fix_template": {
+        "method": "确保格式符与变量类型严格对应",
+        "example": "long long x; scanf(\"%lld\", &x); // 不要用%d"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-029",
+      "name": "缺少return语句",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "非void函数在某些分支路径缺少return，返回值不确定",
+      "signature": "函数部分分支路径无return语句",
+      "fix_template": {
+        "method": "检查所有分支路径确保都有明确的return",
+        "example": "if(...) return a; else return b; // 所有分支都return"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-030",
+      "name": "浮点精度问题",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "浮点比较使用==或精度累积导致结果偏差",
+      "signature": "浮点数使用==比较或多次运算累积精度误差",
+      "fix_template": {
+        "method": "浮点比较用epsilon，或转换为整数运算",
+        "example": "if(fabs(a - b) < 1e-9) // 而非 a == b"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-031",
+      "name": "字符串末尾'\\0'处理缺失",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "手动构造字符串时忘记添加终止符，导致越界读取",
+      "signature": "字符数组操作后未设置终止字符'\\0'",
+      "fix_template": {
+        "method": "手动操作字符串后确保添加'\\0'",
+        "example": "str[len] = '\\0';"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-032",
+      "name": "排序/比较函数错误",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "qsort/sort的比较函数逻辑错误导致排序结果不正确",
+      "signature": "比较函数返回值逻辑与期望排序方向不一致",
+      "fix_template": {
+        "method": "确认比较函数：升序返回a-b，降序返回b-a",
+        "example": "int cmp(const void *a, const void *b) { return *(int*)a - *(int*)b; }"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-033",
+      "name": "动态规划状态转移遗漏",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "DP状态转移方程遗漏某些转移路径导致结果错误",
+      "signature": "dp状态转移中某些合法转移未被考虑",
+      "fix_template": {
+        "method": "枚举所有可能的状态转移来源",
+        "example": "dp[i][j] = max(dp[i-1][j], dp[i-1][j-w[i]] + v[i]); // 不要漏"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "SEED-034",
+      "name": "图论算法中访问标记遗漏",
+      "priority": "P2",
+      "category": "algorithm",
+      "tags": [
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "seed",
+      "description": "BFS/DFS未正确维护visited标记导致死循环或遗漏节点",
+      "signature": "图遍历中visited数组设置时机或范围不正确",
+      "fix_template": {
+        "method": "入队/入栈时立即标记visited，而非出队时",
+        "example": "visited[next] = 1; queue.push(next); // 入队时标记"
+      },
+      "sources": [],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-001",
+      "name": "串口命令处理缺状态前置检查",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "状态机",
+        "命令处理"
+      ],
+      "hit_count": 4,
+      "confidence": "confirmed",
+      "description": "命令在任何状态下都执行，导致运行中数据被篡改。题目说\"空闲状态应答Got it，否则应答Busy\"，代码却无状态判断",
+      "signature": "命令解析函数中无设备状态判断，所有命令无条件执行",
+      "fix_template": {
+        "method": "在命令解析入口处加状态检查，必须逐条核对题目中每个串口命令的状态前置条件",
+        "example": "if(device_state != Idle) { printf(\"Busy\\r\\n\"); return; }"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-002",
+      "name": "行程/任务结束后数据残留",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "数据存储",
+        "数据残留"
+      ],
+      "hit_count": 3,
+      "confidence": "confirmed",
+      "description": "旧途经地残留数组，新数据追加在后面，首目标错误。到达目的地后coordinate_count不清零，下次行程路线混乱",
+      "signature": "任务完成回调或结束处理中未重置数据数组和计数器",
+      "fix_template": {
+        "method": "行程结束时清零计数器和数据数组",
+        "example": "coordinate_count = 0; memset(coordinates, 0, sizeof(coordinates));"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-003",
+      "name": "删除操作搜索范围过大",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "数据存储",
+        "边界错误"
+      ],
+      "hit_count": 2,
+      "confidence": "confirmed",
+      "description": "已过期/已消费的条目仍可被删除，返回值与题意不符。coordinate_remove从索引0搜索，已路过的途经地也能删",
+      "signature": "删除函数搜索范围从0开始而非从当前有效位置开始",
+      "fix_template": {
+        "method": "限制搜索范围为[current_target_index, count-2]，排除已过期+目的地",
+        "example": "for(int i=current_idx; i<count-1; i++) { if(match) { remove(i); break; } }"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-004",
+      "name": "函数已定义但未注册到调度器",
+      "priority": "P0",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "未注册"
+      ],
+      "hit_count": 4,
+      "confidence": "confirmed",
+      "description": "某个功能完全不工作，相关变量始终为初始值。函数体存在但永远不被调用",
+      "signature": "函数定义完整但不在scheduler tasks[]或回调表中",
+      "fix_template": {
+        "method": "将函数添加到任务列表或回调表",
+        "example": "Task tasks[] = { ..., {tim_proc, 10}, }; // 添加到调度器"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-005",
+      "name": "整数类型截断浮点结果",
+      "priority": "P0",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "类型溢出"
+      ],
+      "hit_count": 3,
+      "confidence": "confirmed",
+      "description": "ADC电压、计算结果全部为0或偏差极大。uint32_t v = raw * 3.3f / 4096 → 0.x被截断为0",
+      "signature": "浮点运算结果赋值给整数变量且结果通常小于1",
+      "fix_template": {
+        "method": "用float变量接收浮点运算结果",
+        "example": "float voltage = (float)adc_raw * 3.3f / 4096.0f;"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-006",
+      "name": "局部变量误用替代static",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "LED",
+        "闪烁",
+        "计时"
+      ],
+      "hit_count": 3,
+      "confidence": "confirmed",
+      "description": "闪烁/计时功能失效，每次调用重新初始化。闪烁tick在函数内声明，每次调用都是当前时间",
+      "signature": "需要跨调用持久的状态变量（tick、计数器）声明为普通局部变量",
+      "fix_template": {
+        "method": "加static关键字或改为全局变量",
+        "example": "static uint32_t last_tick = 0; // 加static保持跨调用状态"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-007",
+      "name": "累积量与区间量语义混淆",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "累积统计",
+        "逻辑错误"
+      ],
+      "hit_count": 2,
+      "confidence": "confirmed",
+      "description": "TS/TT等累计值在每次新行程时被错误清零。题目说\"累计行程\"，代码在新行程启动时重置",
+      "signature": "题目标注为\"累计\"的统计量在任务/行程切换时被重置",
+      "fix_template": {
+        "method": "区分\"累计\"（仅指定操作清零）vs \"当次\"（每次重置）",
+        "example": "// total_distance 只在收到RESET命令时清零，不在新行程时清零"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-008",
+      "name": "sscanf格式符与目标类型不匹配",
+      "priority": "P0",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "类型溢出"
+      ],
+      "hit_count": 3,
+      "confidence": "confirmed",
+      "description": "栈损坏、变量被篡改、不可预测行为。uint16_t x; sscanf(cmd, \"%d\", &x); → %d写4字节到2字节地址",
+      "signature": "sscanf/scanf中%d对应的目标变量不是int类型（如uint16_t、uint8_t）",
+      "fix_template": {
+        "method": "改为int临时变量中转，或使用正确的格式符",
+        "example": "int tmp; sscanf(cmd, \"%d\", &tmp); x = (uint16_t)tmp; // 或用%hu"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-009",
+      "name": "批量命令遇单项失败中止全部",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "命令处理"
+      ],
+      "hit_count": 2,
+      "confidence": "confirmed",
+      "description": "部分有效数据丢失，coordinate_count < 预期。循环添加坐标，遇重复立即return，跳过后续有效项",
+      "signature": "循环处理中遇错误直接return而非continue",
+      "fix_template": {
+        "method": "标记错误但继续处理剩余数据",
+        "example": "for(...) { if(invalid) { err_flag = 1; continue; } process(item); }"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-010",
+      "name": "暂停/恢复时间基准跳变",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "计时",
+        "状态机"
+      ],
+      "hit_count": 2,
+      "confidence": "confirmed",
+      "description": "Wait→Busy后位置突然跳变。Wait下last_time不更新，恢复后dt包含暂停时长",
+      "signature": "暂停状态下时间基准变量不更新，恢复时delta_t异常大",
+      "fix_template": {
+        "method": "非Busy状态也持续更新last_time",
+        "example": "if(state != Busy) { last_time = uwTick; return; } // 暂停时也更新基准"
+      },
+      "sources": [
+        {
+          "contest": "15届国赛",
+          "problem": "3.4",
+          "date": "2026-03-10"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": "2026-03-14"
+    },
+    {
+      "id": "EXP-011",
+      "name": "EEPROM写入缺少写后延时",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "I2C",
+        "EEPROM",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "AT24C02写入一字节后需等待5ms写周期完成,否则立即读取返回旧值或0xFF",
+      "signature": "eeprom_write函数末尾无HAL_Delay(5)或等效延时",
+      "fix_template": {
+        "method": "每次I2C写操作后延时5ms",
+        "example": "I2CStop(); HAL_Delay(5);"
+      },
+      "sources": [
+        {
+          "contest": "12-17届省赛满分",
+          "problem": "通用",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-012",
+      "name": "EEPROM首次上电读取未验证有效性",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "I2C",
+        "EEPROM",
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "未擦除EEPROM全为0xFF,首次上电直接使用导致参数异常。应校验if(val<=MAX)",
+      "signature": "eeprom_read后直接赋值无范围校验",
+      "fix_template": {
+        "method": "读取后验证合法范围否则用默认值",
+        "example": "if(buf[0]<=MAX) param=buf[0]; else param=DEFAULT;"
+      },
+      "sources": [
+        {
+          "contest": "16届模拟一",
+          "problem": "EEPROM密码",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-013",
+      "name": "软件I2C GPIO未手动初始化",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "I2C",
+        "EEPROM",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "竞赛板软件I2C的SDA/SCL不在CubeMX中,需手动调用I2CInit(),否则引脚停在模拟模式",
+      "signature": "system_init或main中无I2CInit()但使用了eeprom_read/write",
+      "fix_template": {
+        "method": "system_init中调用I2CInit()",
+        "example": "void system_init(void){ ... I2CInit(); }"
+      },
+      "sources": [
+        {
+          "contest": "14-16届满分",
+          "problem": "通用",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-014",
+      "name": "PWM频率切换未保持占空比比例",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "定时器"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "修改TIM->ARR后若不重算CCR占空比会偏移。先存ratio再改ARR再恢复CCR",
+      "signature": "修改TIM->ARR后未同步更新TIM->CCR",
+      "fix_template": {
+        "method": "先存占空比比例改ARR后恢复CCR",
+        "example": "float r=(float)TIM->CCR/(TIM->ARR+1); TIM->ARR=new; TIM->CCR=(TIM->ARR+1)*r;"
+      },
+      "sources": [
+        {
+          "contest": "16届满分",
+          "problem": "PWM频率调节",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-015",
+      "name": "PWM参数修改后未触发更新事件",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "定时器"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "直接写ARR/CCR后新值在下个更新事件才生效。计数器>新ARR时产生超长脉冲",
+      "signature": "修改TIM->ARR/CCR后无TIM->EGR=TIM_EGR_UG",
+      "fix_template": {
+        "method": "修改后触发更新事件",
+        "example": "TIM->ARR=arr; TIM->CCR=ccr; TIM->EGR=TIM_EGR_UG;"
+      },
+      "sources": [
+        {
+          "contest": "15-16届满分",
+          "problem": "PWM配置",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-016",
+      "name": "频率异常判定未排除无信号情况",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "输入捕获",
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "无信号时tim_ic_value=0,直接与目标频率比较误判异常。应加if(tim_ic_value>0)",
+      "signature": "频率偏差判定代码无对tim_ic_value==0的排除",
+      "fix_template": {
+        "method": "异常判定前确认有效捕获值",
+        "example": "if(tim_ic_value>0){ if(abs(ic-target)>th) flag=1; }"
+      },
+      "sources": [
+        {
+          "contest": "16届满分",
+          "problem": "频率异常检测",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-017",
+      "name": "长按检测key_down/key_up未用互斥分支",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "按键",
+        "逻辑错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "长按需key_down记时key_up检时,必须在if-else互斥分支。15届注释:else一定要有",
+      "signature": "key_down和key_up长按检测写在同级并列if而非if-else",
+      "fix_template": {
+        "method": "key_down和key_up用if-else互斥",
+        "example": "if(key_down==3) tick=uwTick; else if(key_up==3){ if(uwTick-tick>=2000)... }"
+      },
+      "sources": [
+        {
+          "contest": "15届省赛满分",
+          "problem": "长按功能",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-018",
+      "name": "LCD界面切换时未清除不使用的行",
+      "priority": "P3",
+      "category": "embedded",
+      "tags": [
+        "LCD",
+        "格式显示",
+        "数据残留"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "切换LCD界面时未用行不覆盖空格会残留旧内容。每行须显式写内容或20空格",
+      "signature": "LCD界面切换只写新内容行不处理空白行",
+      "fix_template": {
+        "method": "每个界面对所有行都写内容或空格",
+        "example": "Lcd_Sprintf(Line5,\"                    \");"
+      },
+      "sources": [
+        {
+          "contest": "13-17届满分",
+          "problem": "通用LCD",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-019",
+      "name": "调度器时间判断加法溢出",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "调度器",
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "scheduler_run中if(now>=last+rate)在uwTick接近UINT32_MAX时last+rate溢出为小值致任务疯跑。应用差值法if(now-last>=rate)，无符号减法自然处理回绕",
+      "signature": "if(current_time >= tasks[i].last_run + tasks[i].rate_ms)",
+      "fix_template": {
+        "method": "统一使用差值法判断",
+        "example": "if((current_time - tasks[i].last_run) >= tasks[i].rate_ms)"
+      },
+      "sources": [
+        {
+          "contest": "12-15届对比",
+          "problem": "调度器",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-020",
+      "name": "ADC换算运算符优先级陷阱",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "adc_value/=30*3.3f/4096等价于adc_value/=(30*3.3f/4096)=adc_value/0.024，结果被放大40倍。正确写法是(sum/30)*3.3f/4096.0f，分步或加括号明确优先级",
+      "signature": "adc_value /= N * 3.3f / 4096;",
+      "fix_template": {
+        "method": "分步计算或用括号明确",
+        "example": "adc_value = (sum / N) * (3.3f / 4096.0f);"
+      },
+      "sources": [
+        {
+          "contest": "13届省赛",
+          "problem": "ADC换算",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-021",
+      "name": "ADC累加器未清零持续增长",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "全局变量做ADC累加器，adc_proc每次调用+=累加但未先清零，值持续增长直到溢出。应用局部变量float sum=0或先清零全局变量",
+      "signature": "void adc_proc(){ for(i) adc_value[0]+=(float)buf[i]; } // 未清零",
+      "fix_template": {
+        "method": "使用局部变量或累加前清零",
+        "example": "float sum=0; for(i) sum+=buf[i]; adc_value=(sum/N)*3.3f/4096.0f;"
+      },
+      "sources": [
+        {
+          "contest": "13届省赛",
+          "problem": "ADC滤波",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-022",
+      "name": "DMA接收缓冲区未加终止符",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "DMA",
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "UART DMA接收memcpy(temp,buf,Size)后直接strcmp/strncmp，未在temp[Size]='\u0000'。残留数据导致字符串比较错误。17届满分代码特意加了终止符",
+      "signature": "memcpy(temp_buf,dma_buf,Size)后直接strcmp无temp_buf[Size]='\u0000'",
+      "fix_template": {
+        "method": "memcpy后立即添加终止符",
+        "example": "memcpy(temp,buf,Size); temp[Size]='\u0000';"
+      },
+      "sources": [
+        {
+          "contest": "16-17届对比",
+          "problem": "UART",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-023",
+      "name": "UART DMA回调未重启接收",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "DMA",
+        "中断回调"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "HAL_UARTEx_RxEventCallback中处理完数据后必须重新调用HAL_UARTEx_ReceiveToIdle_DMA重启接收，否则只能接收一次数据",
+      "signature": "RxEventCallback中缺少HAL_UARTEx_ReceiveToIdle_DMA再次调用",
+      "fix_template": {
+        "method": "回调末尾重启DMA接收+关半传输中断",
+        "example": "HAL_UARTEx_ReceiveToIdle_DMA(huart,buf,sizeof(buf)); __HAL_DMA_DISABLE_IT(huart->hdmarx,DMA_IT_HT);"
+      },
+      "sources": [
+        {
+          "contest": "16-17届",
+          "problem": "UART DMA",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-024",
+      "name": "RTC GetTime后必须调GetDate",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "STM32 HAL的GetTime()会锁定影子寄存器，必须紧跟GetDate()解锁，否则时间值冻结不再更新。即使不需要日期也必须读",
+      "signature": "HAL_RTC_GetTime()后无HAL_RTC_GetDate()",
+      "fix_template": {
+        "method": "GetTime后必须跟GetDate",
+        "example": "HAL_RTC_GetTime(&hrtc,&time,RTC_FORMAT_BIN); HAL_RTC_GetDate(&hrtc,&date,RTC_FORMAT_BIN); // 必须!"
+      },
+      "sources": [
+        {
+          "contest": "15-16届",
+          "problem": "RTC",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-025",
+      "name": "GPIOC ODR操作需保护低8位",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "LED",
+        "LCD",
+        "GPIO"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "CT117E的GPIOC高8位控制LED低8位是LCD数据线。LED操作必须用掩码保护低8位，否则破坏LCD数据。lcd.c直写ODR会覆盖LED状态",
+      "signature": "GPIOC->ODR=value; // 覆盖全16位",
+      "fix_template": {
+        "method": "LED操作用掩码保护低8位",
+        "example": "GPIOC->ODR&=0x00FF; GPIOC->ODR|=(~(temp<<8))&0xFF00;"
+      },
+      "sources": [
+        {
+          "contest": "12-14届",
+          "problem": "LED/LCD共用端口",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-026",
+      "name": "DMA半传输中断未关闭",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "DMA",
+        "中断回调"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "HAL_UARTEx_ReceiveToIdle_DMA默认开启DMA半传输中断(HT)，接收到一半数据即触发回调，数据不完整。必须关闭HT中断",
+      "signature": "HAL_UARTEx_ReceiveToIdle_DMA后缺少__HAL_DMA_DISABLE_IT(DMA_IT_HT)",
+      "fix_template": {
+        "method": "重启DMA后立即关半传输中断",
+        "example": "__HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);"
+      },
+      "sources": [
+        {
+          "contest": "12-17届",
+          "problem": "UART DMA",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-027",
+      "name": "偏移补偿后负值未保护",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "输入捕获",
+        "边界错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "频率值加偏移参数PX(可为负)后结果可能为负。必须用int32_t接收并检查<=0时标记无效显示NULL。uint32_t会回绕成大正数",
+      "signature": "uint32_t val=freq+offset; // offset为负时回绕",
+      "fix_template": {
+        "method": "有符号类型接收，补偿后检查正值",
+        "example": "int32_t val=freq+offset; if(val<=0){valid=0;val=0;} else valid=1;"
+      },
+      "sources": [
+        {
+          "contest": "15届",
+          "problem": "频率偏移PX",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-028",
+      "name": "ADC分压电路倍率因子遗漏",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "ADC输入经分压电路时换算公式必须乘分压倍率。如3倍分压adc*3.3/4096*3.0。遗漏倍率导致电压读数仅为实际1/N",
+      "signature": "adc_value=raw/4096.0f*3.3f 缺少 *N.0f 分压倍率",
+      "fix_template": {
+        "method": "根据原理图确认分压比乘倍率",
+        "example": "voltage = raw / 4096.0f * 3.3f * 3.0f; // 3倍分压"
+      },
+      "sources": [
+        {
+          "contest": "17届模拟二",
+          "problem": "电池检测",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-029",
+      "name": "参数设置事务模式(三组数组)",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "按键",
+        "状态机"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "参数编辑用三组数组:show(编辑值)/real(生效值)/last(备份)。进入时show=real，编辑只改show，退出时校验合法则real=show否则恢复last。防止非法参数影响运行",
+      "signature": "Para_show[N],Para_real[N],Para_last[N]",
+      "fix_template": {
+        "method": "编辑-校验-生效事务模式",
+        "example": "进入:show=real; 编辑:show+=step; 退出:if(valid(show))real=show; else show=real=last;"
+      },
+      "sources": [
+        {
+          "contest": "16届",
+          "problem": "参数设置",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-030",
+      "name": "迟滞判定(边沿触发计数)",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "状态机",
+        "输入捕获"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "频率突变/超限统计用flag标记进入目标状态,仅flag从1变0(条件不再满足)的跳变沿才count++。避免条件持续满足时重复计数。多通道flag必须独立",
+      "signature": "if(diff<th)flag=1; else if(flag==1){flag=0;count++;}",
+      "fix_template": {
+        "method": "独立flag数组+进入/离开顺序判定",
+        "example": "if(val<th) flag[ch]=1; else if(flag[ch]==1){flag[ch]=0; count[ch]++;}"
+      },
+      "sources": [
+        {
+          "contest": "15届",
+          "problem": "NDA/NDB/NHA统计",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-031",
+      "name": "if语句缺大括号致后续语句无条件执行",
+      "priority": "P0",
+      "category": "embedded",
+      "tags": [
+        "逻辑错误",
+        "按键"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "if(cond)后只有一条语句无花括号,第二条语句实际不在if块内,无条件执行。12届case2: if(mode==1) cn_cost+=0.5f; vn_cost+=0.5f; 中vn_cost总是执行",
+      "signature": "if(cond)后紧跟多条语句但无花括号,第二条缩进对齐但实际不受if控制",
+      "fix_template": {
+        "method": "多条语句的if必须加花括号",
+        "example": "if(mode==1){ cn_cost+=0.5f; vn_cost+=0.5f; }"
+      },
+      "sources": [
+        {
+          "contest": "12届省赛",
+          "problem": "B2/B3按键",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-032",
+      "name": "PWM引脚AF模式下GPIO写入无效",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "GPIO"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "PA7配置为TIM3_CH2复用功能后,GPIO输出控制权归定时器。HAL_GPIO_WritePin(PA7,RESET)无法拉低,必须用HAL_TIM_PWM_Stop停止PWM才能使引脚低电平",
+      "signature": "HAL_GPIO_WritePin(GPIOx,PIN,RESET)对已配置AF的引脚操作",
+      "fix_template": {
+        "method": "用HAL_TIM_PWM_Stop/Start控制PWM引脚,不要用GPIO写",
+        "example": "HAL_TIM_PWM_Stop(&htim3,TIM_CHANNEL_2); // 停止PWM输出低电平"
+      },
+      "sources": [
+        {
+          "contest": "12届省赛",
+          "problem": "B4 PWM切换",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-033",
+      "name": "printf未重定向到串口(缺fputc)",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "使用MicroLIB但未实现fputc函数,printf输出到semihosting而非UART,串口无任何输出。12届测试34/37串口返回信息为空的根因",
+      "signature": "代码中使用printf但usart.c中无fputc函数实现",
+      "fix_template": {
+        "method": "在usart.c中实现fputc重定向到UART",
+        "example": "int fputc(int ch,FILE*f){HAL_UART_Transmit(&huart1,(uint8_t*)&ch,1,50);return ch;}"
+      },
+      "sources": [
+        {
+          "contest": "12届省赛",
+          "problem": "串口输出",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-034",
+      "name": "UART DMA缓冲区类型uint32_t应为uint8_t",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "DMA",
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "串口DMA缓冲区声明为uint32_t[128]实际应为uint8_t[128]。DMA按字节传输,类型不匹配导致数据错位和内存浪费。12届/17届均出现此错误",
+      "signature": "uint32_t uart_rx_dma_buffer[128] 配合 HAL_UARTEx_ReceiveToIdle_DMA",
+      "fix_template": {
+        "method": "串口DMA缓冲区统一用uint8_t",
+        "example": "uint8_t uart_rx_dma_buffer[128];"
+      },
+      "sources": [
+        {
+          "contest": "12届+17届",
+          "problem": "UART DMA",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-035",
+      "name": "TIM预分频器与代码时钟常量不匹配",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "定时器",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "CubeMX中TIM3 PSC=800-1(100kHz),但代码set_pwm_freq用tim3_clk=1000000(1MHz),频率偏低10倍。16届全部PWM输出频率偏低10倍的根因",
+      "signature": "tim_clk常量值与TIM->PSC配置不一致",
+      "fix_template": {
+        "method": "确保代码中时钟常量=PCLK/(PSC+1),或用HAL_RCC_GetPCLKxFreq动态获取",
+        "example": "// PSC=80-1时 tim_clk=80MHz/80=1MHz; PSC=800-1时 tim_clk=80MHz/800=100kHz"
+      },
+      "sources": [
+        {
+          "contest": "16届省赛",
+          "problem": "PWM频率",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-036",
+      "name": "float强转包裹整数除法导致截断",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "PWM",
+        "类型溢出"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "(float)(CCR/(ARR+1))括号内先做整数除法(CCR<ARR时结果为0),再转float仍为0。应写(float)CCR/(float)(ARR+1)。16届每次改频率后占空比被清零的根因",
+      "signature": "(float)(uint32_t_a / uint32_t_b) 其中a<b",
+      "fix_template": {
+        "method": "分子分母各自转float后再除",
+        "example": "float ratio = (float)TIM->CCR / (float)(TIM->ARR+1);"
+      },
+      "sources": [
+        {
+          "contest": "16届省赛",
+          "problem": "set_pwm_freq",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-037",
+      "name": "HAL_Delay在调度器任务中阻塞系统",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "定时器",
+        "调度器",
+        "LED",
+        "闪烁"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "led_proc中用HAL_Delay(100)实现闪烁会阻塞整个调度器100ms,其他任务无法执行。应用HAL_GetTick差值判断或static计数器。17届模拟一此bug导致系统卡顿",
+      "signature": "调度器任务函数内调用HAL_Delay()",
+      "fix_template": {
+        "method": "用HAL_GetTick差值替代HAL_Delay",
+        "example": "static uint32_t t=0; if(HAL_GetTick()-t>=100){t=HAL_GetTick();ucled[7]^=1;}"
+      },
+      "sources": [
+        {
+          "contest": "17届模拟一",
+          "problem": "LD8闪烁",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-038",
+      "name": "ADC DMA启动长度参数错误",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "ADC",
+        "DMA",
+        "初始化缺失"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "HAL_ADC_Start_DMA长度=1,仅buffer[0]被填充,其余63个元素为0,64次平均后电压极小显示0.0V。17届模拟二全部VOLT显示0.0V的根因",
+      "signature": "HAL_ADC_Start_DMA(&hadc, buf, 1) 但buf大小为64",
+      "fix_template": {
+        "method": "DMA长度必须等于缓冲区大小",
+        "example": "HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_buffer, 64);"
+      },
+      "sources": [
+        {
+          "contest": "17届模拟二",
+          "problem": "ADC电压",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-039",
+      "name": "EEPROM写入后RAM变量未同步",
+      "priority": "P2",
+      "category": "embedded",
+      "tags": [
+        "I2C",
+        "EEPROM",
+        "数据残留"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "修改密码写入EEPROM后未同步更新RAM中的password_data,后续验证仍用旧密码。16模拟一新密码永远无法登录的根因",
+      "signature": "eeprom_write(new_data)后未memcpy(ram_data,new_data)",
+      "fix_template": {
+        "method": "写EEPROM前先同步到RAM",
+        "example": "memcpy(password_data,change_input,3); eeprom_write(change_input,0,3);"
+      },
+      "sources": [
+        {
+          "contest": "16届模拟一",
+          "problem": "密码修改",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    },
+    {
+      "id": "EXP-040",
+      "name": "串口返回多余\r\n导致判题失败",
+      "priority": "P1",
+      "category": "embedded",
+      "tags": [
+        "UART",
+        "格式错误"
+      ],
+      "hit_count": 0,
+      "confidence": "confirmed",
+      "description": "题目要求严格ASCII返回不含回车换行,代码printf(\"NULL\r\n\")多了\r\n。16模拟二和12届均出现此问题。必须逐字符比对题目要求",
+      "signature": "printf(\"...\r\n\") 或 printf(\"...\n\") 但题目要求不含换行",
+      "fix_template": {
+        "method": "串口返回严格按题意,不加\r\n除非题目要求",
+        "example": "printf(\"NULL\"); // 不要加\r\n"
+      },
+      "sources": [
+        {
+          "contest": "12届+16模拟二",
+          "problem": "串口格式",
+          "date": "2026-03-14"
+        }
+      ],
+      "created": "2026-03-14",
+      "last_hit": null
+    }
+  ]
+}
