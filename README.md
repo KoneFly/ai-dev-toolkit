@@ -12,6 +12,7 @@
 ai-dev-toolkit/
 ├── skills/                          # Claude Code 自定义技能
 │   ├── embedded-dev/                # 嵌入式开发协议（RIPER-5）
+│   ├── exam-cram-review/            # 期末突击复习文档生成
 │   └── lanqiao-fix/                 # 蓝桥杯竞赛自进化纠错系统
 ├── mcp/                             # MCP Server 配置与工具（待扩展）
 ├── prompts/                         # 可复用 Prompt 模板（待扩展）
@@ -64,6 +65,36 @@ ai-dev-toolkit/
 
 📂 [查看详情](skills/lanqiao-fix/)
 
+### exam-cram-review — 期末突击复习文档生成
+
+面向期末考试突击场景的 Claude Code 技能。给定一个课程复习文件夹（含老师划重点/真题/课本 PDF/PPT），自动反向工程生成 Obsidian 可渲染的结构化复习笔记包。
+
+**设计哲学**：真题/作业是锚点，不是验证手段 — 以考过的题反向追溯课本例题和 PPT 框架，只生成"会被考到"的内容。
+
+**核心特性**：
+
+- **反向工程策略**：真题频次分析 → 考点定位 → 课本/PPT 反向追溯 → 锚点驱动生成
+- **5 类输出文件/章**：考点清单（★级标注）、例题精讲、公式手卡、真题映射、自测题
+- **电路图自动提取**：PyMuPDF 从扫描版/文字版 PDF 提取关键页面为 PNG，嵌入文档
+- **Obsidian 原生兼容**：KaTeX 公式 + `[[双链]]` + Callout 折叠答案 + Mermaid 章节关系图
+- **输入资料 4 级分类**：P0 考纲层 / P0 题源层 / P1 知识层 / P2 辅助层，按优先级调度上下文
+- **工具链容错**：LibreOffice headless + markitdown + PyMuPDF + python-pptx，含完整降级方案
+
+**依赖**：
+
+| 工具 | 用途 |
+|------|------|
+| Python 3.8+ | 运行时 |
+| PyMuPDF | PDF 页面渲染/图片提取 |
+| markitdown | PPT/DOCX → Markdown |
+| python-pptx | PPT 内嵌图片提取 |
+| LibreOffice | .ppt/.doc 格式转换 |
+| Obsidian | 最终阅读器（用户端） |
+
+**已验证案例**：CMOS 模拟集成电路（6 章 × 5 类 = 30 文件 + 总索引 + 24 张电路图）
+
+📂 [查看详情](skills/exam-cram-review/)
+
 ## 技术架构
 
 ```
@@ -73,6 +104,7 @@ ai-dev-toolkit/
 │   Skills     │  MCP Servers │   Prompt Templates        │
 │              │              │                           │
 │ embedded-dev │  (待扩展)     │   (待扩展)                │
+│ exam-cram    │              │                           │
 │ lanqiao-fix  │              │                           │
 ├──────────────┴──────────────┴───────────────────────────┤
 │                    核心能力层                             │
@@ -104,6 +136,25 @@ cp skills/lanqiao-fix/lanqiao-fix-experience.json ~/.claude/
 
 # 使用
 # 在 Claude Code 中执行：/lanqiao-fix <题目文件夹路径>
+```
+
+### exam-cram-review
+
+```bash
+# 1. 安装依赖
+pip install PyMuPDF markitdown python-pptx
+
+# 2. 安装 LibreOffice（Windows）
+winget install TheDocumentFoundation.LibreOffice
+
+# 3. 复制技能目录
+cp -r skills/exam-cram-review/ ~/.claude/skills/exam-cram-review/
+
+# 4. 验证环境
+python -c "import fitz, markitdown, pptx; print('All deps OK')"
+
+# 使用：在 Claude Code 中提及"期末复习"、"突击复习"、"生成复习文档"等关键词自动触发
+# 详细环境配置见 skills/exam-cram-review/SETUP.md
 ```
 
 ## License
