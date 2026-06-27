@@ -79,6 +79,7 @@ ai-dev-toolkit/
 - **Obsidian 原生兼容**：KaTeX 公式 + `[[双链]]` + Callout 折叠答案 + Mermaid 章节关系图
 - **输入资料 4 级分类**：P0 考纲层 / P0 题源层 / P1 知识层 / P2 辅助层，按优先级调度上下文
 - **工具链容错**：LibreOffice headless + markitdown + PyMuPDF + python-pptx，含完整降级方案
+- **本地网页训练器**：`webapp/` 提供仪表盘/知识地图/自测/公式速查四种交互模式，纯静态零后端，做题数据存浏览器 LocalStorage
 
 **依赖**：
 
@@ -90,10 +91,11 @@ ai-dev-toolkit/
 | python-pptx | PPT 内嵌图片提取 |
 | LibreOffice | .ppt/.doc 格式转换 |
 | Obsidian | 最终阅读器（用户端） |
+| 浏览器 | 网页训练器运行环境（可选） |
 
-**已验证案例**：CMOS 模拟集成电路（6 章 × 5 类 = 30 文件 + 总索引 + 24 张电路图）
+**已验证案例**：CMOS 模拟集成电路（6 章 × 5 类 = 30 文件 + 总索引 + 24 张电路图 + 76 公式 / 31 自测题导入网页训练器）
 
-📂 [查看详情](skills/exam-cram-review/)
+📂 [查看详情](skills/exam-cram-review/) · 🌐 [网页训练器](skills/exam-cram-review/webapp/)
 
 ## 技术架构
 

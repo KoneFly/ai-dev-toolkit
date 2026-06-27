@@ -60,6 +60,19 @@ ai复习/
 
 用 **Obsidian** 打开 `00_总索引.md`，按"必出大题"顺序开始复习。
 
+### 6. （可选）启动网页训练器
+
+如果想要交互式做题、自动追踪薄弱点、可视化知识地图：
+
+```bash
+cd ~/.claude/skills/exam-cram-review/webapp
+python -m http.server 8000
+# 浏览器访问 http://localhost:8000
+# 点击「选择目录」选择刚生成的 ai复习/
+```
+
+四种学习模式：仪表盘 / 知识地图 / 自测 / 公式速查。详见 [webapp/README.md](webapp/README.md)。
+
 ---
 
 ## 常见问题

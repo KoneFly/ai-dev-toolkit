@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>期末突击复习 · 学习训练器</title>
+
+  <!-- KaTeX 公式渲染 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Markdown 解析 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+
+  <!-- Cytoscape 知识地图 -->
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 顶栏：进度 + 视图切换 -->
+  <header id="topbar">
+    <div class="brand">期末突击 <span class="vault-name" id="vault-name">未连接</span></div>
+    <nav class="views">
+      <button data-view="dashboard" class="view-btn active">仪表盘</button>
+      <button data-view="map" class="view-btn">知识地图</button>
+      <button data-view="quiz" class="view-btn">自测</button>
+      <button data-view="formula" class="view-btn">公式速查</button>
+    </nav>
+    <div class="progress">
+      <span class="progress-text" id="progress-text">0 / 0</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </header>
+
+  <!-- 启动屏：选择 ai复习/ 目录 -->
+  <section id="splash" class="screen active">
+    <div class="splash-card">
+      <h1>选择复习目录</h1>
+      <p>点击下方按钮选择 <code>ai复习/</code> 目录（由 exam-cram-review skill 生成）</p>
+      <input type="file" id="dir-picker" webkitdirectory directory multiple style="display:none">
+      <button id="pick-dir" class="primary">📁 选择目录</button>
+      <button id="load-demo" class="ghost">加载示例数据</button>
+      <p class="hint">所有数据保存在浏览器本地，不会上传任何服务器</p>
+    </div>
+  </section>
+
+  <!-- 仪表盘：总览 + 各章节正确率 -->
+  <section id="view-dashboard" class="screen">
+    <div class="container">
+      <h2>复习仪表盘</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value" id="stat-chapters">0</div><div class="stat-label">章节数</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-questions">0</div><div class="stat-label">题目总数</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-correct">0%</div><div class="stat-label">总体正确率</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-weak">-</div><div class="stat-label">最薄弱章节</div></div>
+      </div>
+      <h3>各章节掌握度</h3>
+      <div id="chapter-mastery"></div>
+      <h3>最近错题</h3>
+      <div id="recent-mistakes"></div>
+    </div>
+  </section>
+
+  <!-- 知识地图：Cytoscape 渲染 -->
+  <section id="view-map" class="screen">
+    <div class="map-toolbar">
+      <button id="map-fit">适配视图</button>
+      <span class="legend"><i class="dot green"></i>≥85% 掌握</span>
+      <span class="legend"><i class="dot yellow"></i>60-85% 中等</span>
+      <span class="legend"><i class="dot red"></i>&lt;60% 薄弱</span>
+      <span class="legend"><i class="dot gray"></i>未练习</span>
+    </div>
+    <div id="cy-container"></div>
+  </section>
+
+  <!-- 自测：一题一屏 -->
+  <section id="view-quiz" class="screen">
+    <div class="quiz-shell">
+      <aside class="quiz-sidebar">
+        <h3>章节筛选</h3>
+        <ul id="quiz-chapter-list"></ul>
+      </aside>
+      <div class="quiz-main">
+        <div class="quiz-header">
+          <span id="quiz-counter">- / -</span>
+          <span id="quiz-chapter-tag"></span>
+          <button id="quiz-shuffle">随机顺序</button>
+        </div>
+        <div class="quiz-question-card">
+          <div class="question-body" id="quiz-question">请从左侧选择章节开始</div>
+          <div class="answer-area">
+            <button id="quiz-reveal" class="primary" disabled>显示答案</button>
+            <div class="answer-body" id="quiz-answer" hidden></div>
+            <div class="judge" id="quiz-judge" hidden>
+              <button data-judge="right" class="judge-btn right">✓ 我会</button>
+              <button data-judge="wrong" class="judge-btn wrong">✗ 不会</button>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-nav">
+          <button id="quiz-prev">← 上一题</button>
+          <button id="quiz-next">下一题 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 公式速查：遮盖模式 -->
+  <section id="view-formula" class="screen">
+    <div class="formula-toolbar">
+      <select id="formula-chapter-select"></select>
+      <button id="formula-show-all">全部显示</button>
+      <button id="formula-hide-all" class="primary">全部隐藏</button>
+      <button id="formula-random-test">随机测试</button>
+      <span class="hint">点击行揭示公式</span>
+    </div>
+    <div id="formula-tables"></div>
+  </section>
+
+  <!-- 通用 Toast -->
+  <div id="toast" hidden></div>
+
+  <!-- 应用脚本 -->
+  <script src="parser.js"></script>
+  <script src="storage.js"></script>
+  <script src="views/dashboard.js"></script>
+  <script src="views/map.js"></script>
+  <script src="views/quiz.js"></script>
+  <script src="views/formula.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
