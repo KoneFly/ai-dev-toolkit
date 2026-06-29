@@ -30,9 +30,17 @@
         <span class="mastery-name">${c.name} ${'★'.repeat(c.star)}</span>
         <div class="mastery-bar"><div class="mastery-fill ${m.level}" style="width:${pct}%"></div></div>
         <span class="mastery-pct">${m.right + m.wrong > 0 ? pct + '%' : '—'}</span>
+        <button class="row-edit" title="在编辑器中打开">📝</button>
       `;
       row.style.cursor = 'pointer';
-      row.onclick = () => App.openQuizForChapter(c.id);
+      row.onclick = (e) => {
+        if (e.target.classList.contains('row-edit')) {
+          e.stopPropagation();
+          App.openInEditor(c.id);
+        } else {
+          App.openQuizForChapter(c.id);
+        }
+      };
       mountMast.appendChild(row);
     }
 
@@ -40,19 +48,34 @@
     const mountMis = document.getElementById('recent-mistakes');
     mountMis.innerHTML = '';
     if (App.state.mistakes.length === 0) {
-      mountMis.innerHTML = '<div class="mistake-item" style="color:var(--text-mute)">暂无错题，开始练习吧～</div>';
+      mountMis.innerHTML = '<div class="mistake-item" style="color:var(--ink-fade)">暂无错题，开始练习吧～</div>';
     } else {
       for (const mis of App.state.mistakes.slice(0, 12)) {
         const ch = chapters[mis.chId];
         if (!ch) continue;
         const item = document.createElement('div');
         item.className = 'mistake-item';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '10px';
         item.innerHTML = `
           <span class="chapter">${ch.name}</span>
-          ${mis.title}
+          <span style="flex:1;">${mis.title || '(无标题)'}</span>
+          <button class="row-edit" data-act="open" title="重做此题">▶️</button>
+          <button class="row-edit" data-act="explain" title="让 AI 讲解此题">🤖</button>
         `;
-        item.style.cursor = 'pointer';
-        item.onclick = () => App.openQuizForChapter(mis.chId, mis.qIdx);
+        item.querySelector('[data-act="open"]').onclick = (e) => {
+          e.stopPropagation();
+          App.openQuizForChapter(mis.chId, mis.qIdx);
+        };
+        item.querySelector('[data-act="explain"]').onclick = (e) => {
+          e.stopPropagation();
+          if (window.AIView && AIView.explainMistake) {
+            AIView.explainMistake(mis.chId, mis.qIdx);
+          } else {
+            App.showToast('AI 讲解功能未加载');
+          }
+        };
         mountMis.appendChild(item);
       }
     }

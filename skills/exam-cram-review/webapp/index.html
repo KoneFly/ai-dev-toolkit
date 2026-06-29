@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>期末突击复习 · 学习训练器</title>
+  <title>📓 期末突击复习 · 学习训练器</title>
 
   <!-- KaTeX 公式渲染 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -13,8 +13,9 @@
   <!-- Markdown 解析 -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
-  <!-- Cytoscape 知识地图 -->
+  <!-- Cytoscape 知识地图 + HTML 节点插件 -->
   <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape-node-html-label@1.2.2/dist/cytoscape-node-html-label.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -22,24 +23,28 @@
 
   <!-- 顶栏：进度 + 视图切换 -->
   <header id="topbar">
-    <div class="brand">期末突击 <span class="vault-name" id="vault-name">未连接</span></div>
+    <div class="brand">期末突击<span class="vault-name" id="vault-name">未连接</span></div>
     <nav class="views">
       <button data-view="dashboard" class="view-btn active">仪表盘</button>
       <button data-view="map" class="view-btn">知识地图</button>
       <button data-view="quiz" class="view-btn">自测</button>
       <button data-view="formula" class="view-btn">公式速查</button>
+      <button data-view="ai" class="view-btn">✨ AI 出题</button>
     </nav>
     <div class="progress">
       <span class="progress-text" id="progress-text">0 / 0</span>
       <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
     </div>
+    <button id="editor-config" class="ghost" title="配置首选编辑器">⚙ 编辑器</button>
+    <button id="swap-vault" class="ghost" title="重新选择复习目录">📁 换库</button>
+    <input type="file" id="swap-vault-input" webkitdirectory directory multiple style="display:none">
   </header>
 
   <!-- 启动屏：选择 ai复习/ 目录 -->
   <section id="splash" class="screen active">
     <div class="splash-card">
-      <h1>选择复习目录</h1>
-      <p>点击下方按钮选择 <code>ai复习/</code> 目录（由 exam-cram-review skill 生成）</p>
+      <h1>📓 选择复习目录</h1>
+      <p>点击下方按钮选择 <code>ai复习/</code> 目录<br>（由 exam-cram-review skill 生成）</p>
       <input type="file" id="dir-picker" webkitdirectory directory multiple style="display:none">
       <button id="pick-dir" class="primary">📁 选择目录</button>
       <button id="load-demo" class="ghost">加载示例数据</button>
@@ -47,7 +52,7 @@
     </div>
   </section>
 
-  <!-- 仪表盘：总览 + 各章节正确率 -->
+  <!-- 仪表盘 -->
   <section id="view-dashboard" class="screen">
     <div class="container">
       <h2>复习仪表盘</h2>
@@ -64,19 +69,46 @@
     </div>
   </section>
 
-  <!-- 知识地图：Cytoscape 渲染 -->
+  <!-- 知识地图 -->
   <section id="view-map" class="screen">
     <div class="map-toolbar">
       <button id="map-fit">适配视图</button>
+      <button id="map-layout-cose" class="active">力导向</button>
+      <button id="map-layout-tree">层级树</button>
+      <button id="map-layout-reset">重置布局</button>
       <span class="legend"><i class="dot green"></i>≥85% 掌握</span>
       <span class="legend"><i class="dot yellow"></i>60-85% 中等</span>
       <span class="legend"><i class="dot red"></i>&lt;60% 薄弱</span>
       <span class="legend"><i class="dot gray"></i>未练习</span>
+      <span class="hint">拖拽节点 · 滚轮缩放 · 双击进入自测</span>
     </div>
-    <div id="cy-container"></div>
+    <div class="map-shell">
+      <div id="cy-container"></div>
+      <aside id="map-detail" class="hidden">
+        <div class="detail-close" id="map-detail-close">×</div>
+        <h3 id="detail-name"></h3>
+        <div class="detail-star" id="detail-star"></div>
+        <div class="detail-stats">
+          <div><span class="lbl">掌握度</span><b id="detail-rate">—</b></div>
+          <div><span class="lbl">考点数</span><b id="detail-keypoints">—</b></div>
+          <div><span class="lbl">公式数</span><b id="detail-formulas">—</b></div>
+          <div><span class="lbl">自测题</span><b id="detail-quiz">—</b></div>
+          <div><span class="lbl">错题数</span><b id="detail-wrong">—</b></div>
+        </div>
+        <div class="detail-section">
+          <h4>主要考点</h4>
+          <ul id="detail-keypoints-list"></ul>
+        </div>
+        <div class="detail-actions">
+          <button class="primary" id="detail-go-quiz">开始自测</button>
+          <button id="detail-go-formula">看公式</button>
+          <button id="detail-go-editor" title="在编辑器中打开本章 MD">📝 编辑</button>
+        </div>
+      </aside>
+    </div>
   </section>
 
-  <!-- 自测：一题一屏 -->
+  <!-- 自测 -->
   <section id="view-quiz" class="screen">
     <div class="quiz-shell">
       <aside class="quiz-sidebar">
@@ -87,6 +119,10 @@
         <div class="quiz-header">
           <span id="quiz-counter">- / -</span>
           <span id="quiz-chapter-tag"></span>
+          <div class="quiz-mode-switch">
+            <button id="quiz-mode-quiz" class="active">自测题</button>
+            <button id="quiz-mode-example">例题练习</button>
+          </div>
           <button id="quiz-shuffle">随机顺序</button>
         </div>
         <div class="quiz-question-card">
@@ -108,16 +144,162 @@
     </div>
   </section>
 
-  <!-- 公式速查：遮盖模式 -->
+  <!-- 公式速查 -->
   <section id="view-formula" class="screen">
     <div class="formula-toolbar">
       <select id="formula-chapter-select"></select>
+      <div class="importance-filter">
+        <button data-imp="all" class="active">全部重要级</button>
+        <button data-imp="must">必背</button>
+        <button data-imp="familiar">熟悉</button>
+        <button data-imp="know">了解</button>
+      </div>
+      <select id="formula-mastery-filter">
+        <option value="all">全部背诵状态</option>
+        <option value="untouched">未练习</option>
+        <option value="right">已掌握</option>
+        <option value="wrong">常错</option>
+      </select>
+      <div class="view-mode-switch">
+        <button id="formula-view-grid" class="active" title="卡片网格">📅 卡片</button>
+        <button id="formula-view-table" title="紧凑列表">📝 列表</button>
+      </div>
+      <button id="formula-anki-btn" class="primary" title="进入Anki卡牌背诵模式">🃏 卡牌背诵</button>
       <button id="formula-show-all">全部显示</button>
-      <button id="formula-hide-all" class="primary">全部隐藏</button>
+      <button id="formula-hide-all">全部隐藏</button>
       <button id="formula-random-test">随机测试</button>
-      <span class="hint">点击行揭示公式</span>
+      <span class="hint">点击公式揭示 · 点击 ▾ 展开详情</span>
     </div>
+
+    <!-- Anki背诵面板 -->
+    <div id="formula-anki-container" class="anki-container hidden">
+      <div class="anki-header">
+        <span class="anki-title">🃏 核心公式卡牌背诵</span>
+        <span id="anki-progress" class="anki-progress">0 / 0</span>
+        <button id="anki-close-btn" class="ghost">退出 ×</button>
+      </div>
+      <div class="anki-card-wrapper">
+        <div id="anki-card" class="anki-card">
+          <div class="anki-card-front">
+            <span class="anki-badge" id="anki-badge">必背</span>
+            <h3 id="anki-name">载流子浓度公式</h3>
+            <div id="anki-condition-wrap" class="anki-meta-item">
+              <span class="lbl">适用条件</span>
+              <p id="anki-condition">本征半导体，热平衡状态</p>
+            </div>
+            <div id="anki-note-wrap" class="anki-meta-item">
+              <span class="lbl">记忆备注</span>
+              <p id="anki-note">常考选择题</p>
+            </div>
+          </div>
+          <div id="anki-card-back" class="anki-card-back hidden">
+            <div class="anki-formula-container">
+              <div id="anki-formula-math">$$ n_i^2 = N_c N_v e^{-E_g / kT} $$</div>
+            </div>
+            <div id="anki-meaning-wrap" class="anki-meta-item">
+              <span class="lbl">物理含义</span>
+              <p id="anki-meaning">—</p>
+            </div>
+            <div id="anki-derivation-wrap" class="anki-meta-item">
+              <span class="lbl">推导起点</span>
+              <p id="anki-derivation">—</p>
+            </div>
+            <div id="anki-application-wrap" class="anki-meta-item">
+              <span class="lbl">应用场景</span>
+              <p id="anki-application">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="anki-actions">
+        <button id="anki-reveal-btn" class="primary">🔑 显示公式 (Space)</button>
+        <div id="anki-judge-actions" class="anki-judge-actions hidden">
+          <button data-judge="wrong" class="judge-btn wrong">✗ 没记住 (1)</button>
+          <button data-judge="right" class="judge-btn right">✓ 记住了 (2)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 战报结算面板 -->
+    <div id="formula-anki-report" class="anki-report hidden">
+      <h3>背诵挑战结束！🎉</h3>
+      <div class="report-stats">
+        <div class="report-stat"><b id="report-total">0</b><span>背诵总数</span></div>
+        <div class="report-stat"><b id="report-right" style="color:var(--ink-green)">0</b><span>记住数量</span></div>
+        <div class="report-stat"><b id="report-wrong" style="color:var(--ink-red)">0</b><span>没记住数量</span></div>
+      </div>
+      <div class="report-actions">
+        <button id="report-retry-wrong-btn" class="primary">🔁 温习错题</button>
+        <button id="report-restart-btn">🔄 重新开始</button>
+        <button id="report-close-btn" class="ghost">退出背诵</button>
+      </div>
+    </div>
+
     <div id="formula-tables"></div>
+  </section>
+
+  <!-- ✨ AI 出题（新增视图） -->
+  <section id="view-ai" class="screen">
+    <div class="ai-shell">
+      <!-- 左侧配置面板 -->
+      <aside class="ai-sidebar">
+        <h3>✨ AI 出题</h3>
+        <div id="ai-config-status" class="ai-config-status"></div>
+
+        <div class="ai-form-row">
+          <label>章节范围 <span style="float:right;font-weight:400;">
+            <button id="ai-ch-all" style="padding:2px 8px;font-size:11px;">全选</button>
+            <button id="ai-ch-clear" style="padding:2px 8px;font-size:11px;">清空</button>
+          </span></label>
+          <div id="ai-chapter-grid" class="ai-chapter-grid"></div>
+        </div>
+
+        <div class="ai-form-row">
+          <label>知识源（注入 prompt 的材料）</label>
+          <div id="ai-source-list" class="ai-source-list"></div>
+          <div class="hint-text">每份材料会被截断到约 3000 字以防 token 爆炸</div>
+        </div>
+
+        <div class="ai-form-row">
+          <label>题型</label>
+          <select id="ai-type"></select>
+        </div>
+
+        <div class="ai-form-row">
+          <label>难度</label>
+          <div class="ai-difficulty">
+            <button data-diff="easy">基础</button>
+            <button data-diff="mid" class="active">中等</button>
+            <button data-diff="hard">高难</button>
+          </div>
+        </div>
+
+        <div class="ai-form-row">
+          <label>题目数量（1-20）</label>
+          <input type="number" id="ai-count" min="1" max="20" value="5">
+        </div>
+
+        <div class="ai-form-row">
+          <label>额外要求（可选）</label>
+          <input type="text" id="ai-extra" placeholder="如：侧重 PN 结接触电势的计算">
+        </div>
+
+        <button id="ai-generate-btn" class="primary ai-generate-btn" data-state="idle">✨ 生成题目</button>
+      </aside>
+
+      <!-- 右侧结果区 -->
+      <main class="ai-main">
+        <h2>
+          AI 题库
+          <span class="bank-count" id="ai-bank-count">已收录 0 题</span>
+          <span style="margin-left:auto;display:flex;gap:8px;">
+            <button id="ai-bank-export" style="font-size:13px;">📥 导出 MD</button>
+            <button id="ai-bank-clear" style="font-size:13px;color:var(--ink-red);">清空题库</button>
+          </span>
+        </h2>
+        <div id="ai-result-list"></div>
+      </main>
+    </div>
   </section>
 
   <!-- 通用 Toast -->
@@ -126,10 +308,13 @@
   <!-- 应用脚本 -->
   <script src="parser.js"></script>
   <script src="storage.js"></script>
+  <script src="ai-client.js"></script>
+  <script src="editor.js"></script>
   <script src="views/dashboard.js"></script>
   <script src="views/map.js"></script>
   <script src="views/quiz.js"></script>
   <script src="views/formula.js"></script>
+  <script src="views/ai.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -67,9 +67,14 @@
         formulas: [],
         quizQuestions: [],
         examMapping: '',
-        deps: []
+        deps: [],
+        files: {}        // 文件名 -> 相对路径（用于跳转编辑器）
       };
       const f = fileMap[dir];
+      // 记录每个文件的相对路径（webkitRelativePath，去掉用户选择目录的根名）
+      for (const fname in f) {
+        ch.files[fname] = stripVaultPrefix(f[fname].webkitRelativePath || `${dir}/${fname}`);
+      }
       if (f['01_考点清单.md']) {
         const content = await readText(f['01_考点清单.md']);
         ch.keypoints = parseKeypoints(content);
@@ -94,7 +99,13 @@
     const deps = parseMasterIndexDeps(masterIndexContent);
     for (const [from, toList] of Object.entries(deps)) {
       if (chapters[from]) {
-        chapters[from].deps = toList.filter(t => chapters[t]);
+        chapters[from].deps = toList.map(item => item.to).filter(t => chapters[t]);
+        chapters[from].depTypes = {};
+        toList.forEach(item => {
+          if (chapters[item.to]) {
+            chapters[from].depTypes[item.to] = item.type;
+          }
+        });
       }
     }
 
@@ -109,6 +120,17 @@
       r.onerror = reject;
       r.readAsText(file, 'utf-8');
     });
+  }
+
+  /**
+   * 把 webkitRelativePath 去掉最顶层目录名
+   * "ai复习/01_第1章/01_考点清单.md" → "01_第1章/01_考点清单.md"
+   * 用户配置的 vaultRoot 直接拼接此相对路径即可
+   */
+  function stripVaultPrefix(path) {
+    const parts = path.split('/');
+    if (parts.length <= 1) return path;
+    return parts.slice(1).join('/');
   }
 
   /* ============== 解析星级 ============== */
@@ -168,6 +190,9 @@
       const cleanTitle = stripFormulaNoise(sec.title);
       const blockFormulas = extractBlockFormulas(sec.body);
 
+      // 区块级元信息（重要级、物理含义、推导起点、应用场景）
+      const meta = extractFormulaMeta(sec.body, sec.title);
+
       for (let idx = 0; idx < blockFormulas.length; idx++) {
         // 多公式 + 通用标题 → 加序号
         let name = cleanTitle;
@@ -179,7 +204,13 @@
           name,
           formula: blockFormulas[idx],
           condition: extractCondition(sec.body),
-          note: extractNote(sec.body, sec.title)
+          note: extractNote(sec.body, sec.title),
+          importance: meta.importance,    // 'must' | 'familiar' | 'know' | 'normal'
+          meaning: meta.meaning,          // 物理含义
+          derivation: meta.derivation,    // 推导起点
+          application: meta.application,  // 应用场景
+          related: meta.related,          // 关联公式（文本片段）
+          rawSectionBody: sec.body        // 保留原 markdown 供详细展开
         });
       }
 
@@ -194,7 +225,13 @@
           name: nameRaw.replace(/\*\*/g, '').trim() || sec.title,
           formula: fcol,
           condition: row.find(c => c !== fcol && /区|时|当|>|</.test(c)) || '',
-          note: row[row.length - 1] !== fcol ? row[row.length - 1] : ''
+          note: row[row.length - 1] !== fcol ? row[row.length - 1] : '',
+          importance: meta.importance,
+          meaning: '',
+          derivation: '',
+          application: '',
+          related: '',
+          rawSectionBody: ''
         });
       }
     }
@@ -236,18 +273,29 @@
 
   /* ============== 解析总索引中的章节依赖 ============== */
   function parseMasterIndexDeps(text) {
-    // 从 Mermaid 图块中提取 ChX --> ChY 或 ChX -.-> ChY
-    const deps = {};
+    const deps = {}; // { '01': [ { to: '02', type: 'dependency' }, ... ] }
     const mermaidRe = /```mermaid[\s\S]*?```/g;
     const blocks = text.match(mermaidRe) || [];
     for (const block of blocks) {
-      const edgeRe = /Ch(\d+)\s*-[.->\s]*->\s*Ch(\d+)/g;
-      let m;
-      while ((m = edgeRe.exec(block))) {
-        const from = m[1].padStart(2, '0');
-        const to = m[2].padStart(2, '0');
-        if (!deps[from]) deps[from] = [];
-        if (!deps[from].includes(to)) deps[from].push(to);
+      const lines = block.split('\n');
+      for (const line of lines) {
+        // 1. 实线：Ch01 --> Ch02
+        const solidMatch = line.match(/Ch(\d+)\s*-+>\s*Ch(\d+)/);
+        if (solidMatch) {
+          const from = solidMatch[1].padStart(2, '0');
+          const to = solidMatch[2].padStart(2, '0');
+          if (!deps[from]) deps[from] = [];
+          deps[from].push({ to, type: 'dependency' });
+          continue;
+        }
+        // 2. 虚线：Ch01 -.-> Ch02
+        const dashedMatch = line.match(/Ch(\d+)\s*-\.-\s*>\s*Ch(\d+)/) || line.match(/Ch(\d+)\s*-\.\.-\s*>\s*Ch(\d+)/);
+        if (dashedMatch) {
+          const from = dashedMatch[1].padStart(2, '0');
+          const to = dashedMatch[2].padStart(2, '0');
+          if (!deps[from]) deps[from] = [];
+          deps[from].push({ to, type: 'tool' });
+        }
       }
     }
     return deps;
@@ -322,7 +370,71 @@
     return /^(核心公式|关键公式|公式|主要公式|重点公式)$/.test(title);
   }
 
+  /**
+   * 从公式区块的 markdown body 中提取元信息：
+   * - importance: 重要级（必背 / 熟悉 / 了解 / 一般）
+   * - meaning:    物理含义
+   * - derivation: 推导起点
+   * - application: 应用场景
+   * - related:    关联公式（文本片段）
+   *
+   * 检测启发式：
+   * - title 含 "必记/必背/必考/老师指定" → importance = 'must'
+   * - title 含 "重点" → importance = 'familiar'
+   * - body 含 "可推导自/由...推出/即由" → derivation
+   * - body 含 "应用于/用于/场景:" → application
+   * - body 含 "相关公式/参考/联系" 或 公式编号引用 → related
+   * - body 中加粗段「物理含义」「核心结论」「关键关系」 → meaning
+   */
+  function extractFormulaMeta(body, title) {
+    const t = title || '';
+
+    let importance = 'normal';
+    if (/必记|必背|必考|必出/.test(t + body)) importance = 'must';
+    else if (/重点|老师指定/.test(t)) importance = 'familiar';
+    else if (/了解|参考|备选/.test(t + body)) importance = 'know';
+
+    // 物理含义：找加粗段「**物理含义**」「**核心结论**」「**关键关系**」「**意义**」
+    let meaning = '';
+    const meaningMatch = body.match(/\*\*(?:物理含义|核心结论|关键关系|关键观察|意义|含义|核心要点)\*\*[：:]?\s*([\s\S]*?)(?=\n\n|\n\*\*|\n##|\n\$\$|$)/);
+    if (meaningMatch) meaning = cleanInline(meaningMatch[1]);
+
+    // 推导起点 — 优先识别 **推导起点**：xxx 加粗段（与模板对齐），
+    // 退化时再用启发式短语 "由 X 推出 / 可推导自 / 起源于"
+    let derivation = '';
+    const derBoldMatch = body.match(/\*\*(?:推导起点|推导|起源)\*\*[：:]?\s*([\s\S]*?)(?=\n\n|\n\*\*|\n##|\n\$\$|$)/);
+    if (derBoldMatch) {
+      derivation = cleanInline(derBoldMatch[1]);
+    } else {
+      const derMatch = body.match(/(?:可推导自|由[^。\n]+推出|推导自|起源于|由\s*\$[^$]+\$\s*推得)[:：]?\s*([\s\S]*?)(?=\n\n|\n##|$)/);
+      if (derMatch) derivation = cleanInline(derMatch[0]);
+    }
+
+    // 应用场景
+    let application = '';
+    const appMatch = body.match(/\*\*(?:应用场景|应用|使用场景|典型应用)\*\*[：:]?\s*([\s\S]*?)(?=\n\n|\n\*\*|\n##|$)/);
+    if (appMatch) application = cleanInline(appMatch[1]);
+
+    // 关联公式：抓所有对其他公式的引用文本（含 "公式 N.M" 或双链 [[..]]）
+    let related = '';
+    const relMatches = [
+      ...(body.match(/公式\s*\d+\.\d+/g) || []),
+      ...(body.match(/\[\[[^\]]+#?[^\]]*\]\]/g) || [])
+    ];
+    if (relMatches.length) related = [...new Set(relMatches)].join(' · ');
+
+    return { importance, meaning, derivation, application, related };
+  }
+
+  function cleanInline(s) {
+    return String(s).replace(/\*\*/g, '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  }
+
   function extractCondition(body) {
+    // 优先识别 **条件**：xxx 或 **适用条件**：xxx 加粗段
+    const boldMatch = body.match(/\*\*(?:条件|适用条件)\*\*[：:]?\s*([^\n]+)/);
+    if (boldMatch) return boldMatch[1].trim();
+    // 退化为旧启发式
     const m = body.match(/(其中|条件)[：:]([^\n]+)/);
     return m ? m[2].trim() : '';
   }

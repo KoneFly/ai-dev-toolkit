@@ -41,12 +41,39 @@ const App = (function () {
     else if (name === 'map') MapView.render();
     else if (name === 'quiz') QuizView.render();
     else if (name === 'formula') FormulaView.render();
+    else if (name === 'ai') AIView.render();
   };
 
   /* ============== 跨视图跳转 ============== */
   App.openQuizForChapter = function (chId, qIdx) {
     App.switchView('quiz');
     QuizView.render(chId, qIdx);
+  };
+
+  /**
+   * 在用户配置的编辑器中打开指定章节的 MD 文件
+   * @param {string} chId - 章节 id
+   * @param {string} fileName - 文件名（如 '01_考点清单.md'），不传则用 00_总索引
+   */
+  App.openInEditor = async function (chId, fileName) {
+    const ch = chId ? App.state.chapters[chId] : null;
+    let relPath;
+    if (!ch) {
+      relPath = '00_总索引.md';
+    } else if (fileName && ch.files && ch.files[fileName]) {
+      relPath = ch.files[fileName];
+    } else if (ch.files && ch.files['01_考点清单.md']) {
+      relPath = ch.files['01_考点清单.md'];
+    } else {
+      App.showToast('未找到对应文件');
+      return;
+    }
+    const result = await Editor.openFile(relPath);
+    if (result.action === 'opened') {
+      App.showToast('已尝试打开编辑器');
+    } else if (result.action === 'copied') {
+      App.showToast('路径已复制到剪贴板');
+    }
   };
 
   /* ============== 进度条 ============== */
@@ -126,9 +153,35 @@ const App = (function () {
       btn.onclick = () => App.switchView(btn.dataset.view);
     });
 
+    // 顶栏编辑器配置按钮
+    document.getElementById('editor-config').onclick = () => Editor.showSettingsDialog();
+
+    // 顶栏换库按钮
+    const swapInput = document.getElementById('swap-vault-input');
+    document.getElementById('swap-vault').onclick = () => {
+      if (App.state.chapters && confirm('换库会保留你的练习记录（按章节匹配）。继续？')) {
+        swapInput.click();
+      } else if (!App.state.chapters) {
+        swapInput.click();
+      }
+    };
+    swapInput.onchange = async e => {
+      const oldMastery = App.state.mastery;
+      const oldMistakes = App.state.mistakes;
+      await App.loadFromFiles(Array.from(e.target.files));
+      // 保留旧的掌握度数据（按章节 id 匹配）
+      App.state.mastery = oldMastery || {};
+      App.state.mistakes = oldMistakes || [];
+      App.persist();
+      App.switchView(App.currentView);
+      swapInput.value = '';
+    };
+
     // 各视图绑定
     if (QuizView.bind) QuizView.bind();
     if (FormulaView.bind) FormulaView.bind();
+    if (MapView.bind) MapView.bind();
+    if (AIView.bind) AIView.bind();
     document.getElementById('map-fit').onclick = () => MapView.fit();
 
     // 如果有缓存的章节数据，跳过启动屏

@@ -71,7 +71,18 @@ python -m http.server 8000
 # 点击「选择目录」选择刚生成的 ai复习/
 ```
 
-四种学习模式：仪表盘 / 知识地图 / 自测 / 公式速查。详见 [webapp/README.md](webapp/README.md)。
+五种学习模式：仪表盘 / 知识地图 / 自测 / 公式速查 / ✨ AI 出题。详见 [webapp/README.md](webapp/README.md)。
+
+### 7. （可选）配置 AI 出题
+
+webapp 支持浏览器直连各大 AI API，无需后端：
+
+1. 进入 webapp → 点击顶栏「✨ AI 出题」
+2. 点击「配置」按钮 → 选择预设平台或自定义 Base URL
+3. 填入 API Key（仅存浏览器 LocalStorage，不经任何中间服务器）
+4. 选择章节 + 知识源 → 生成练习题 → 加入题库或导出 Markdown
+
+支持平台：DeepSeek / 智谱 GLM / Kimi / 通义千问 / 硅基流动 / OpenAI / 自部署 Ollama
 
 ---
 

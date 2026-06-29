@@ -131,6 +131,7 @@ except (FileNotFoundError, subprocess.TimeoutExpired):
 exam-cram-review/
 ├── SKILL.md              ← 主入口（自动触发规则 + 概览）
 ├── SETUP.md              ← 本文件（环境初始化）
+├── QUICKSTART.md         ← 30 秒快速开始
 ├── LICENSE               ← MIT 许可证
 ├── references/
 │   ├── workflow.md       ← 5+1 阶段完整工作流
@@ -141,10 +142,25 @@ exam-cram-review/
 │   ├── keypoints.md
 │   ├── examples.md
 │   ├── formulas.md
+│   ├── formula-gen-prompt.md ← 子代理公式生成增强 prompt
 │   ├── exam-mapping.md
 │   └── self-test.md
-└── scripts/
-    └── extract_office_batch.sh ← 批量提取辅助脚本
+├── scripts/
+│   └── extract_office_batch.sh ← 批量提取辅助脚本
+└── webapp/               ← 交互式训练器（泛黄笔记纸主题）
+    ├── index.html
+    ├── style.css         ← 笔记纸主题设计系统
+    ├── app.js            ← 视图调度 + 启动屏
+    ├── parser.js         ← MD 文件解析
+    ├── storage.js        ← LocalStorage 持久化
+    ├── editor.js         ← 编辑器跳转（Obsidian/VS Code/Typora）
+    ├── ai-client.js      ← OpenAI 兼容 API 客户端（流式）
+    └── views/
+        ├── dashboard.js  ← 仪表盘（统计 + 错题）
+        ├── map.js        ← 知识地图（Cytoscape + HTML 索引卡）
+        ├── quiz.js       ← 自测/例题练习
+        ├── formula.js    ← 公式卡片（Anki 3D 翻转）
+        └── ai.js         ← ✨ AI 出题 / 错题讲解
 ```
 
 ---
@@ -176,3 +192,39 @@ A: 确认图片文件在 Vault 内，且使用 `![[文件名.png]]` 而非 `![](
 
 **Q: LibreOffice 转换卡住不动？**
 A: 加 `--norestore` 标志。如果仍有问题，杀掉残留的 soffice 进程后重试。
+
+---
+
+## AI API 配置（可选）
+
+webapp 的 ✨ AI 出题功能支持浏览器直连 OpenAI 兼容 API。此功能为**可选增强**，不配置不影响核心训练流程。
+
+### 支持的平台
+
+| 平台 | Base URL | 推荐场景 |
+|------|---------|---------|
+| DeepSeek | `https://api.deepseek.com/v1` | 国内最便宜，命题能力强 |
+| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | 免费额度大 |
+| 月之暗面 Kimi | `https://api.moonshot.cn/v1` | 长上下文友好 |
+| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 中文教材理解好 |
+| 硅基流动 | `https://api.siliconflow.cn/v1` | 聚合多家开源模型 |
+| OpenAI | `https://api.openai.com/v1` | gpt-4o-mini 等 |
+| 自部署 | `http://localhost:11434/v1` | Ollama / vLLM |
+
+### 配置方式
+
+1. 启动 webapp → 点击「✨ AI 出题」
+2. 点击「配置」按钮
+3. 选择预设平台或填写自定义 Base URL + Model 名
+4. 填入对应平台的 API Key
+5. 点击保存
+
+### 数据安全
+
+- API Key **仅存储于浏览器 LocalStorage**
+- 所有 AI 请求由浏览器直接发起，**不经任何中间服务器**
+- 清除浏览器数据即删除配置
+
+### CORS 注意
+
+大部分中国 AI 平台（DeepSeek/Kimi/GLM/通义/硅基流动）已开放浏览器 CORS，可直接调用。如使用自部署 Ollama，需启动时加 `OLLAMA_ORIGINS=* ollama serve` 或 `--cors` 标志。

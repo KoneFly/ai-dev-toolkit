@@ -53,11 +53,22 @@
       mastery: {},
       mistakes: [],
       lastView: 'dashboard',
-      mapPositions: {}
+      mapPositions: {},
+      formulaMastery: {},       // 公式背诵掌握度
+      aiQuestionBank: {}        // AI 生成题库：{ chId: { questions: [...] } }
     };
   }
 
   /* ============== 业务方法 ============== */
+
+  /**
+   * 记录公式的答题结果
+   */
+  Storage.recordFormulaAnswer = function (state, chId, formulaName, judge) {
+    if (!state.formulaMastery) state.formulaMastery = {};
+    if (!state.formulaMastery[chId]) state.formulaMastery[chId] = {};
+    state.formulaMastery[chId][formulaName] = judge;
+  };
 
   /**
    * 记录一题的答题结果
