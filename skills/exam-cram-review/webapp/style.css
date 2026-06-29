@@ -1482,6 +1482,49 @@ code {
   51%, 100% { opacity: 0; }
 }
 
+/* 进度条 banner（流式增量渲染时显示） */
+.ai-progress-banner {
+  background: var(--paper-card);
+  border: 1px dashed var(--ink-red);
+  border-radius: var(--radius-lg);
+  padding: 14px 22px;
+  margin-bottom: 18px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(120, 80, 30, 0.08);
+}
+.ai-progress-banner.done {
+  border-style: solid;
+  border-color: var(--ink-green);
+  background: rgba(77, 107, 47, 0.06);
+}
+.ai-progress-banner.error {
+  border-color: var(--ink-red);
+  background: rgba(184, 66, 61, 0.06);
+}
+.ai-progress-text {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+.ai-progress-banner.done .ai-progress-text { color: var(--ink-green); }
+.ai-progress-banner.error .ai-progress-text { color: var(--ink-red); }
+.ai-progress-detail {
+  font-family: var(--font-en-hand);
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+.ai-progress-banner:not(.done):not(.error)::after {
+  content: "▋";
+  color: var(--ink-red);
+  animation: blink 1s infinite;
+  position: absolute;
+  right: 22px;
+  top: 14px;
+}
+
 .ai-question-card {
   background: var(--paper-card);
   border: 1px solid var(--border-soft);

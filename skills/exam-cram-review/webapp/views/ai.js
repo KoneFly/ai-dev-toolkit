@@ -195,7 +195,9 @@
     renderResults();
   }
 
-  /* ============== 生成题目 ============== */
+  /* ============== 生成题目（分批 + 流式增量） ============== */
+  const BATCH_THRESHOLD = 5; // 超过 5 题就拆批
+
   async function generate() {
     if (currentController) {
       currentController.abort();
@@ -217,57 +219,147 @@
       return;
     }
 
-    // 收集知识源材料
     const sources = collectSources();
     if (sources.length === 0) {
       App.showToast('所选章节中没有匹配的知识源内容');
       return;
     }
 
-    const messages = AIClient.buildQuestionPrompt({
-      sources,
-      questionType: currentType,
-      difficulty: currentDifficulty,
-      count: currentCount,
-      extraHint
-    });
-
-    // 切换 UI 到流式
-    const mount = document.getElementById('ai-result-list');
-    mount.innerHTML = `<div class="ai-streaming" id="ai-stream-box">⏳ 正在调用 AI 生成题目...</div>`;
-    const streamBox = document.getElementById('ai-stream-box');
-
+    // 切换 UI
     const btn = document.getElementById('ai-generate-btn');
     btn.textContent = '⏸ 中止';
     btn.dataset.state = 'streaming';
 
-    currentController = await AIClient.streamChat(
-      messages,
-      (delta, full) => {
-        streamBox.textContent = full;
-      },
-      (full) => {
-        currentController = null;
-        btn.textContent = '✨ 生成题目';
-        btn.dataset.state = 'idle';
-        // 尝试解析
-        try {
-          generatedQuestions = AIClient.parseQuestionsFromOutput(full);
-          App.showToast(`✓ 已生成 ${generatedQuestions.length} 道题`);
-          renderResults();
-        } catch (e) {
-          streamBox.innerHTML = `<div style="color:var(--ink-red);font-weight:600;">⚠️ 解析失败：${e.message}</div>
-            <div style="margin-top:10px;font-size:12px;color:var(--ink-soft);">原始输出（用于调试）：</div>
-            <pre style="font-size:11px;background:rgba(0,0,0,0.04);padding:10px;border-radius:4px;overflow:auto;max-height:300px;">${escapeHtml(full)}</pre>`;
-        }
-      },
-      (err) => {
-        currentController = null;
-        btn.textContent = '✨ 生成题目';
-        btn.dataset.state = 'idle';
-        streamBox.innerHTML = `<div style="color:var(--ink-red);font-weight:600;">⚠️ 错误：${err.message}</div>`;
+    // 清空当前结果，准备增量渲染
+    generatedQuestions = [];
+    const mount = document.getElementById('ai-result-list');
+    mount.innerHTML = `<div class="ai-progress-banner" id="ai-progress-banner">
+      <div class="ai-progress-text">⏳ AI 正在命题中...</div>
+      <div class="ai-progress-detail" id="ai-progress-detail">已生成 0 / ${currentCount} 题</div>
+    </div>
+    <div id="ai-questions-stream"></div>`;
+
+    // 计算分批策略：N>5 拆两批并行
+    const batches = splitBatches(currentCount, BATCH_THRESHOLD);
+    let totalDone = 0;
+    let totalFailed = 0;
+
+    const updateProgress = () => {
+      const detail = document.getElementById('ai-progress-detail');
+      if (detail) {
+        const failed = totalFailed > 0 ? `（${totalFailed} 题解析失败）` : '';
+        detail.textContent = `已生成 ${totalDone} / ${currentCount} 题${failed}`;
       }
-    );
+    };
+
+    const onQuestionReceived = (q) => {
+      if (!q) {
+        totalFailed++;
+        updateProgress();
+        return;
+      }
+      generatedQuestions.push(q);
+      totalDone++;
+      updateProgress();
+      // 立即渲染这一题
+      const streamMount = document.getElementById('ai-questions-stream');
+      if (streamMount) {
+        const card = buildQuestionCard(q, generatedQuestions.length - 1);
+        streamMount.appendChild(card);
+        renderMath(card);
+      }
+    };
+
+    // 用一个外层 controller 聚合所有批次的中止
+    const aggController = { abort: () => {} };
+    currentController = aggController;
+    const subControllers = [];
+    aggController.abort = () => subControllers.forEach(c => c && c.abort && c.abort());
+
+    try {
+      // 并行执行所有批次
+      const promises = batches.map((batchCount, batchIdx) =>
+        runSingleBatch(sources, batchCount, batchIdx, onQuestionReceived, subControllers)
+      );
+      await Promise.allSettled(promises);
+
+      // 完成
+      const banner = document.getElementById('ai-progress-banner');
+      if (banner) {
+        if (totalDone > 0) {
+          banner.className = 'ai-progress-banner done';
+          banner.innerHTML = `<div class="ai-progress-text">✓ 完成：共生成 ${totalDone} 题${totalFailed > 0 ? `，${totalFailed} 题解析失败` : ''}</div>`;
+          App.showToast(`✓ 已生成 ${totalDone} 道题`);
+        } else {
+          banner.className = 'ai-progress-banner error';
+          banner.innerHTML = `<div class="ai-progress-text">⚠️ 未能生成任何题目，请重试或检查 API 配置</div>`;
+        }
+      }
+      // 重渲染题库统计
+      const bank = App.state.aiQuestionBank || {};
+      const bankCount = Object.values(bank).reduce((s, ch) => s + (ch.questions || []).length, 0);
+      const bankCountEl = document.getElementById('ai-bank-count');
+      if (bankCountEl) bankCountEl.textContent = `已收录 ${bankCount} 题`;
+    } finally {
+      currentController = null;
+      btn.textContent = '✨ 生成题目';
+      btn.dataset.state = 'idle';
+    }
+  }
+
+  /**
+   * 把总数 N 拆成多个批次。N <= threshold 单批；N > threshold 均分两批。
+   */
+  function splitBatches(total, threshold) {
+    if (total <= threshold) return [total];
+    const half = Math.ceil(total / 2);
+    return [half, total - half];
+  }
+
+  /**
+   * 单批次：调用一次 streamChat + 流式 NDJSON 解析
+   */
+  async function runSingleBatch(sources, count, batchIdx, onQuestion, subControllers) {
+    const messages = AIClient.buildQuestionPrompt({
+      sources,
+      questionType: currentType,
+      difficulty: currentDifficulty,
+      count,
+      extraHint: extraHint + (batchIdx > 0 ? `\n（这是第 ${batchIdx + 1} 批，请避免与前一批重复）` : '')
+    });
+
+    const parser = AIClient.createStreamParser((q) => onQuestion(q));
+
+    return new Promise((resolve) => {
+      let aborted = false;
+      AIClient.streamChat(
+        messages,
+        (delta, full) => {
+          if (!aborted) parser.feed(delta);
+        },
+        (full) => {
+          parser.flush();
+          resolve();
+        },
+        (err) => {
+          aborted = true;
+          parser.flush();
+          console.error(`批次 ${batchIdx + 1} 错误:`, err);
+          // 在进度条下方加一条错误（非致命）
+          const banner = document.getElementById('ai-progress-banner');
+          if (banner && !banner.querySelector(`.batch-err-${batchIdx}`)) {
+            const errLine = document.createElement('div');
+            errLine.className = `batch-err-${batchIdx}`;
+            errLine.style.cssText = 'font-size:12px;color:var(--ink-red);margin-top:4px;';
+            errLine.textContent = `批次 ${batchIdx + 1} 出错：${err.message}`;
+            banner.appendChild(errLine);
+          }
+          resolve();
+        }
+      ).then(ctrl => {
+        if (ctrl) subControllers.push(ctrl);
+      });
+    });
   }
 
   function collectSources() {

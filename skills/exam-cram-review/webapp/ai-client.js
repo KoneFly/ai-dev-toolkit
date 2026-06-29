@@ -59,7 +59,7 @@
       apiKey: '',
       model: 'deepseek-chat',
       temperature: 0.7,
-      maxTokens: 4000
+      maxTokens: 8000
     };
   }
 
@@ -177,28 +177,27 @@
 
 ${opts.extraHint ? `### 额外要求\n${opts.extraHint}\n\n` : ''}${sourceText}
 
-### 输出格式（严格遵守）
+### 输出格式（严格遵守，否则前端无法解析）
 
-为每道题输出 JSON 对象，包裹在 \`\`\`json 代码块中。整体输出一个 JSON 数组：
+每道题输出为**一个独立的 JSON 对象**，前后用分隔符包裹。**禁止** 用 \`\`\`json 代码块，**禁止** 输出 JSON 数组，**禁止** 在分隔符外写任何额外内容。
 
-\`\`\`json
-[
-  {
-    "title": "题目1：简短小标题（不超过20字）",
-    "difficulty": "${opts.difficulty}",
-    "type": "${opts.questionType}",
-    "question": "题目正文，含必要的图/数据/已知条件。公式用 $...$。",
-    "answer": "详细解答步骤：\\n1. 第一步思路...\\n2. 第二步计算...\\n最终答案：$$ 结果 $$",
-    "keypoints": ["涉及考点1", "涉及考点2"]
-  },
-  ...
-]
-\`\`\`
+格式如下（必须逐字使用这两个分隔符）：
 
-重要提示：
-- JSON 字符串内的换行用 \\n 转义
-- LaTeX 反斜杠必须双重转义（即 \\\\\\\\frac, \\\\\\\\sigma 等）
-- 不要在 JSON 外多余输出，只输出代码块`;
+<<<QSTART>>>
+{"title":"题目1的小标题（不超过20字）","difficulty":"${opts.difficulty}","type":"${opts.questionType}","question":"题目正文，含必要数据和已知条件，公式用 $...$ 包裹","answer":"详细解答步骤，可以用 \\n 换行，公式用 $...$ 或 $$...$$","keypoints":["考点1","考点2"]}
+<<<QEND>>>
+
+<<<QSTART>>>
+{"title":"题目2...","difficulty":"...","type":"...","question":"...","answer":"...","keypoints":[]}
+<<<QEND>>>
+
+... 共 ${opts.count} 个 <<<QSTART>>>...<<<QEND>>> 块。
+
+JSON 规则：
+- 所有字符串内的换行用 \\n 转义
+- LaTeX 反斜杠用双反斜杠（如 \\\\frac、\\\\sigma）
+- 每个块内的 JSON 必须单行，禁止换行
+- 严禁在块外输出任何前言/解释/markdown`;
 
     return [
       { role: 'system', content: system },
@@ -220,35 +219,133 @@ ${opts.extraHint ? `### 额外要求\n${opts.extraHint}\n\n` : ''}${sourceText}
     ];
   };
 
-  /* ============== 解析 AI 输出的 JSON 题目 ============== */
-  AIClient.parseQuestionsFromOutput = function (text) {
-    // 优先匹配 ```json ... ```
-    const blockMatch = text.match(/```json\s*([\s\S]*?)```/);
-    let jsonStr = blockMatch ? blockMatch[1].trim() : text.trim();
+  /* ============== 解析单条 NDJSON 题目（强容错） ============== */
+  function parseSingleQuestion(rawBlock, idx) {
+    if (!rawBlock || !rawBlock.trim()) return null;
 
-    // 容错：如果没有代码块，尝试直接寻找 [...] 数组
-    if (!blockMatch) {
-      const arrMatch = jsonStr.match(/\[\s*\{[\s\S]*\}\s*\]/);
-      if (arrMatch) jsonStr = arrMatch[0];
-    }
+    // 1. 剥离可能残留的 ```json / ``` 代码块包裹
+    let s = rawBlock.trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
 
+    // 2. 取出第一对 {} 之间的内容（防止前后污染）
+    const firstBrace = s.indexOf('{');
+    const lastBrace = s.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) return null;
+    s = s.slice(firstBrace, lastBrace + 1);
+
+    // 3. 尝试解析
     try {
-      const arr = JSON.parse(jsonStr);
-      if (!Array.isArray(arr)) throw new Error('输出不是数组');
-      return arr.map((q, i) => ({
-        id: 'ai-' + Date.now() + '-' + i,
-        title: q.title || `AI 题 ${i + 1}`,
-        difficulty: q.difficulty || 'mid',
-        type: q.type || '题目',
-        question: q.question || '',
-        answer: q.answer || '',
-        keypoints: q.keypoints || [],
-        createdAt: Date.now()
-      }));
+      const q = JSON.parse(s);
+      return normalizeQuestion(q, idx);
     } catch (e) {
-      console.error('解析失败:', e, '原始:', jsonStr.slice(0, 500));
-      throw new Error('AI 输出不是有效 JSON：' + e.message);
+      // 兜底：尝试修复尾部未闭合的字符串/引号
+      try {
+        const fixed = s.replace(/,\s*}$/, '}').replace(/,\s*]$/, ']');
+        const q = JSON.parse(fixed);
+        return normalizeQuestion(q, idx);
+      } catch (e2) {
+        console.warn(`第 ${idx + 1} 题解析失败:`, e.message, '原始:', s.slice(0, 200));
+        return null;
+      }
     }
+  }
+
+  function normalizeQuestion(q, idx) {
+    return {
+      id: 'ai-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).slice(2, 6),
+      title: q.title || `AI 题 ${idx + 1}`,
+      difficulty: q.difficulty || 'mid',
+      type: q.type || '题目',
+      question: q.question || '',
+      answer: q.answer || '',
+      keypoints: Array.isArray(q.keypoints) ? q.keypoints : [],
+      createdAt: Date.now()
+    };
+  }
+
+  /* ============== 流式增量解析（NDJSON 协议） ==============
+   * 在 streamChat 的 onDelta 回调中实时调用：发现一个完整
+   * <<<QSTART>>>...<<<QEND>>> 块就触发 onQuestion(question)
+   * 返回的 createParser 维护状态，处理流式拼接
+   */
+  AIClient.createStreamParser = function (onQuestion) {
+    let buffer = '';
+    let questionIdx = 0;
+
+    return {
+      feed(deltaText) {
+        buffer += deltaText;
+        // 循环消费所有已完整的块
+        while (true) {
+          const startIdx = buffer.indexOf('<<<QSTART>>>');
+          if (startIdx === -1) {
+            // 无开始标记：保留尾部 16 字符防止跨 chunk 切断 "<<<QSTAR" 等
+            if (buffer.length > 32) buffer = buffer.slice(-32);
+            break;
+          }
+          const endIdx = buffer.indexOf('<<<QEND>>>', startIdx + 12);
+          if (endIdx === -1) break; // 当前块还没收完
+
+          const rawBlock = buffer.slice(startIdx + 12, endIdx);
+          buffer = buffer.slice(endIdx + 10);
+
+          const q = parseSingleQuestion(rawBlock, questionIdx);
+          if (q) {
+            onQuestion(q, questionIdx);
+            questionIdx++;
+          } else {
+            // 解析失败，让上层知道（idx 不递增）
+            onQuestion(null, questionIdx);
+          }
+        }
+      },
+      flush() {
+        // 流结束：处理可能未闭合的最后一块（兜底）
+        const startIdx = buffer.indexOf('<<<QSTART>>>');
+        if (startIdx !== -1) {
+          // 没有 QEND 但有 QSTART：尝试解析残块（找最后一个 } 截断）
+          const rawBlock = buffer.slice(startIdx + 12);
+          const lastBrace = rawBlock.lastIndexOf('}');
+          if (lastBrace !== -1) {
+            const q = parseSingleQuestion(rawBlock.slice(0, lastBrace + 1), questionIdx);
+            if (q) {
+              onQuestion(q, questionIdx);
+              questionIdx++;
+            }
+          }
+        }
+        buffer = '';
+        return questionIdx;
+      },
+      get count() { return questionIdx; }
+    };
+  };
+
+  /* ============== 兼容旧 API：从完整文本批量解析 ============== */
+  AIClient.parseQuestionsFromOutput = function (text) {
+    const questions = [];
+    const parser = AIClient.createStreamParser((q) => {
+      if (q) questions.push(q);
+    });
+    parser.feed(text);
+    parser.flush();
+    if (questions.length === 0) {
+      // 兜底：尝试旧的 JSON 数组协议
+      try {
+        const blockMatch = text.match(/```json\s*([\s\S]*?)```/);
+        const jsonStr = blockMatch ? blockMatch[1].trim() : text.trim();
+        const arr = JSON.parse(jsonStr);
+        if (Array.isArray(arr)) {
+          return arr.map((q, i) => normalizeQuestion(q, i));
+        }
+      } catch (e) {
+        // 完全失败
+      }
+      throw new Error('未能从输出中解析出任何题目（既不是 NDJSON 也不是 JSON 数组）');
+    }
+    return questions;
   };
 
   global.AIClient = AIClient;
