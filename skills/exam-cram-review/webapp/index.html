@@ -26,6 +26,7 @@
     <div class="brand">期末突击<span class="vault-name" id="vault-name">未连接</span></div>
     <nav class="views">
       <button data-view="dashboard" class="view-btn active">仪表盘</button>
+      <button data-view="knowledge" class="view-btn">📖 知识总览</button>
       <button data-view="map" class="view-btn">知识地图</button>
       <button data-view="quiz" class="view-btn">自测</button>
       <button data-view="formula" class="view-btn">公式速查</button>
@@ -105,6 +106,37 @@
           <button id="detail-go-editor" title="在编辑器中打开本章 MD">📝 编辑</button>
         </div>
       </aside>
+    </div>
+  </section>
+
+  <!-- 📖 知识总览 -->
+  <section id="view-knowledge" class="screen">
+    <div class="knowledge-shell">
+      <aside class="knowledge-sidebar">
+        <h3>章节列表</h3>
+        <ul id="knowledge-chapter-list"></ul>
+      </aside>
+      <div class="knowledge-main">
+        <div class="knowledge-header">
+          <h2 id="knowledge-title">选择章节</h2>
+          <span class="knowledge-stats" id="knowledge-stats"></span>
+        </div>
+        <div class="knowledge-toolbar">
+          <div id="knowledge-tabs" class="knowledge-tabs">
+            <button data-tab="keypoints" class="active">📋 考点清单</button>
+            <button data-tab="examples">📝 例题精讲</button>
+            <button data-tab="examMapping">🎯 真题映射</button>
+          </div>
+          <div id="knowledge-star-filter" class="knowledge-star-filter">
+            <button data-star="0" class="active">全部</button>
+            <button data-star="3">★★★</button>
+            <button data-star="2">★★</button>
+            <button data-star="1">★</button>
+          </div>
+          <input type="text" id="knowledge-search" placeholder="搜索考点/例题...">
+        </div>
+        <div id="knowledge-content" class="knowledge-content"></div>
+      </div>
     </div>
   </section>
 
@@ -311,6 +343,7 @@
   <script src="ai-client.js"></script>
   <script src="editor.js"></script>
   <script src="views/dashboard.js"></script>
+  <script src="views/knowledge.js"></script>
   <script src="views/map.js"></script>
   <script src="views/quiz.js"></script>
   <script src="views/formula.js"></script>
