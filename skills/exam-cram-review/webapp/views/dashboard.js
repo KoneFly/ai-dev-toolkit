@@ -24,24 +24,68 @@
     for (const c of sorted) {
       const m = AppStorage.computeMastery(App.state, c);
       const pct = Math.round(m.rate * 100);
+      const hasKeypoints = c.keypoints && c.keypoints.length > 0;
       const row = document.createElement('div');
       row.className = 'mastery-row';
       row.innerHTML = `
         <span class="mastery-name">${c.name} ${'★'.repeat(c.star)}</span>
         <div class="mastery-bar"><div class="mastery-fill ${m.level}" style="width:${pct}%"></div></div>
         <span class="mastery-pct">${m.right + m.wrong > 0 ? pct + '%' : '—'}</span>
+        ${hasKeypoints ? '<button class="row-edit row-expand" title="展开考点预览">▸</button>' : ''}
         <button class="row-edit" title="在编辑器中打开">📝</button>
       `;
       row.style.cursor = 'pointer';
+
+      // 考点预览展开区
+      if (hasKeypoints) {
+        const preview = document.createElement('div');
+        preview.className = 'mastery-preview';
+        preview.hidden = true;
+        const top3 = c.keypoints.slice(0, 3);
+        preview.innerHTML = top3.map(kp => {
+          const stars = '★'.repeat(kp.star || 3);
+          const bodySnippet = (kp.body || '').replace(/\n/g, ' ').slice(0, 80);
+          return `<div class="preview-item">
+            <span class="preview-star">${stars}</span>
+            <span class="preview-title">${kp.title}</span>
+            <span class="preview-snippet">${bodySnippet}${(kp.body || '').length > 80 ? '...' : ''}</span>
+          </div>`;
+        }).join('') + `<div class="preview-more" data-ch-id="${c.id}">查看全部 ${c.keypoints.length} 个考点 →</div>`;
+
+        preview.querySelector('.preview-more').onclick = (e) => {
+          e.stopPropagation();
+          if (window.KnowledgeView) {
+            App.switchView('knowledge');
+            KnowledgeView.render(c.id);
+          }
+        };
+
+        const expandBtn = row.querySelector('.row-expand');
+        expandBtn.onclick = (e) => {
+          e.stopPropagation();
+          const isHidden = preview.hidden;
+          preview.hidden = !isHidden;
+          expandBtn.textContent = isHidden ? '▾' : '▸';
+        };
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mastery-row-wrapper';
+        wrapper.appendChild(row);
+        wrapper.appendChild(preview);
+        mountMast.appendChild(wrapper);
+      } else {
+        mountMast.appendChild(row);
+      }
+
       row.onclick = (e) => {
         if (e.target.classList.contains('row-edit')) {
+          if (e.target.classList.contains('row-expand')) return;
           e.stopPropagation();
           App.openInEditor(c.id);
         } else {
           App.openQuizForChapter(c.id);
         }
       };
-      mountMast.appendChild(row);
     }
 
     // 最近错题

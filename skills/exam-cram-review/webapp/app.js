@@ -38,6 +38,7 @@ const App = (function () {
     AppStorage.save(App.state);
 
     if (name === 'dashboard') DashboardView.render();
+    else if (name === 'knowledge') KnowledgeView.render();
     else if (name === 'map') MapView.render();
     else if (name === 'quiz') QuizView.render();
     else if (name === 'formula') FormulaView.render();
@@ -181,6 +182,7 @@ const App = (function () {
     if (QuizView.bind) QuizView.bind();
     if (FormulaView.bind) FormulaView.bind();
     if (MapView.bind) MapView.bind();
+    if (KnowledgeView.bind) KnowledgeView.bind();
     if (AIView.bind) AIView.bind();
     document.getElementById('map-fit').onclick = () => MapView.fit();
 
