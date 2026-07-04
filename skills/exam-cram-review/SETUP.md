@@ -10,7 +10,7 @@
 |------|---------|------|
 | OS | Windows 10+ / macOS 12+ / Linux (glibc 2.31+) | Windows 11 / Ubuntu 22.04 |
 | Python | 3.8+ | 3.10+ |
-| 磁盘空间 | 500MB（含 LibreOffice） | 1GB |
+| 磁盘空间 | 500MB（含 LibreOffice） | 1GB（含 TeX Live 需 5GB） |
 | Obsidian | 1.0+ | 最新版 |
 
 ---
@@ -29,7 +29,45 @@ pip install PyMuPDF markitdown python-pptx
 | `markitdown` | PPT/DOCX → Markdown 文本提取 | >=0.1 |
 | `python-pptx` | PPT 内嵌图片直接提取 | >=0.6 |
 
-### 2. LibreOffice（必需，用于格式转换）
+### 2. Pandoc + TeX Live（可选，用于 PDF 输出）
+
+如果选择生成 PDF 格式（公式排版更稳定），需要安装 Pandoc 和 TeX Live：
+
+**Windows：**
+```powershell
+# Pandoc
+winget install JohnMacFarlane.Pandoc
+
+# TeX Live（完整安装约 5GB，推荐 basic scheme 约 300MB）
+# 下载：https://tug.org/texlive/acquire-netinstall.html
+# 或直接安装：https://mirror.ctan.org/systems/texlive/tlnet/install-tl-windows.exe
+```
+
+**macOS：**
+```bash
+brew install pandoc
+brew install --cask mactex-no-gui
+```
+
+**Linux：**
+```bash
+sudo apt install pandoc texlive-xetex texlive-lang-chinese fonts-noto-cjk
+```
+
+**验证安装：**
+```bash
+pandoc --version    # 应输出 3.x
+xelatex --version   # 应输出 XeTeX 相关版本
+```
+
+**使用方式：**
+```bash
+# 自动把 ai复习/ 下所有章节 MD 转为 PDF
+bash ~/.claude/skills/exam-cram-review/scripts/md2pdf.sh "ai复习/"
+# PDF 输出到 ai复习/_pdf/ 目录
+```
+
+### 3. LibreOffice（必需，用于格式转换）
 
 **Windows：**
 ```powershell
@@ -57,7 +95,7 @@ soffice --version
 # 应输出：LibreOffice 7.x 或更高
 ```
 
-### 3. Obsidian（用户端，非 AI 依赖）
+### 4. Obsidian（用户端，非 AI 依赖）
 
 复习文档的最终阅读器。确保：
 - 已创建 Vault 并将输出目录纳入
@@ -143,10 +181,12 @@ exam-cram-review/
 │   ├── examples.md
 │   ├── formulas.md
 │   ├── formula-gen-prompt.md ← 子代理公式生成增强 prompt
+│   ├── pandoc-header.tex ← PDF 输出的 LaTeX 前言（中文字体+数学包）
 │   ├── exam-mapping.md
 │   └── self-test.md
 ├── scripts/
-│   └── extract_office_batch.sh ← 批量提取辅助脚本
+│   ├── extract_office_batch.sh ← 批量提取辅助脚本
+│   └── md2pdf.sh         ← Pandoc + XeLaTeX 批量转 PDF
 └── webapp/               ← 交互式训练器（泛黄笔记纸主题）
     ├── index.html
     ├── style.css         ← 笔记纸主题设计系统
@@ -156,7 +196,8 @@ exam-cram-review/
     ├── editor.js         ← 编辑器跳转（Obsidian/VS Code/Typora）
     ├── ai-client.js      ← OpenAI 兼容 API 客户端（流式）
     └── views/
-        ├── dashboard.js  ← 仪表盘（统计 + 错题）
+        ├── dashboard.js  ← 仪表盘（含考点预览展开）
+        ├── knowledge.js  ← 📖 知识总览（考点/例题/真题映射阅读）
         ├── map.js        ← 知识地图（Cytoscape + HTML 索引卡）
         ├── quiz.js       ← 自测/例题练习
         ├── formula.js    ← 公式卡片（Anki 3D 翻转）
