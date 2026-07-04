@@ -1,0 +1,79 @@
+% pandoc-header.tex - 中文 LaTeX 前言模板
+% 用于 Pandoc + XeLaTeX 编译 Markdown → PDF
+% 使用方式：pandoc input.md -o output.pdf --pdf-engine=xelatex -H pandoc-header.tex
+
+% ============== 中文字体 ==============
+\usepackage{xeCJK}
+\setCJKmainfont{SimSun}[BoldFont=SimHei, ItalicFont=KaiTi]
+\setCJKsansfont{SimHei}
+\setCJKmonofont{FangSong}
+
+% 英文字体回退
+\setmainfont{Times New Roman}[Ligatures=TeX]
+\setsansfont{Arial}
+\setmonofont{Consolas}[Scale=0.9]
+
+% ============== 数学公式 ==============
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathtools}
+\usepackage{bm}                    % 粗体数学符号
+
+% ============== 页面布局 ==============
+\usepackage[
+  a4paper,
+  top=2.5cm, bottom=2.5cm,
+  left=2.5cm, right=2.5cm
+]{geometry}
+
+% ============== 页眉页脚 ==============
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\leftmark}
+\fancyhead[R]{\small 期末突击复习}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============== 代码高亮 ==============
+\usepackage{listings}
+\lstset{
+  basicstyle=\small\ttfamily,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color[gray]{0.96},
+  numbers=left,
+  numberstyle=\tiny\color[gray]{0.5}
+}
+
+% ============== 表格美化 ==============
+\usepackage{booktabs}
+\usepackage{longtable}
+
+% ============== 超链接 ==============
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!70!black,
+  citecolor=green!50!black
+}
+
+% ============== 标题样式 ==============
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{red!70!black}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+% ============== boxed 答案 ==============
+\usepackage{tcolorbox}
+\newtcolorbox{answerbox}{
+  colback=blue!3,
+  colframe=blue!40!black,
+  title=答案,
+  fonttitle=\bfseries
+}
+
+% ============== 杂项 ==============
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\setlist{nosep}                    % 紧凑列表
