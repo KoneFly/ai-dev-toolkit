@@ -14,11 +14,13 @@ license: MIT
 | 步骤 | 命令/动作 | 关键产物 |
 |------|----------|---------|
 | 1. 扫描资料 | Glob `*.pdf` `*.ppt*` `*.doc*` `*.txt` `*.md` | 资料清单+分类 |
-| 2. 提取文本 | `soffice --convert-to pptx`+`python -m markitdown` | `_extracted/*.md` |
-| 3. 提取电路图 | PyMuPDF pixmap / python-pptx image.blob | `_figures/*.png` |
-| 4. 锚点分析 | 读真题/作业 → 提取所有题型 | 考点频次表 |
-| 5. 反向追溯 | 真题考点 → 课本例题 + PPT页 | 章节-考点-例题映射 |
-| 6. 生成文档 | 按章写 5 类文件 + 总索引 + 嵌入图片引用 | `ai复习/*.md` |
+| 2. 确认输出格式 | 询问用户：MD / PDF / webapp 中选 | 产出方式 |
+| 3. 提取文本 | `soffice --convert-to pptx`+`python -m markitdown` | `_extracted/*.md` |
+| 4. 提取电路图 | PyMuPDF pixmap / python-pptx image.blob | `_figures/*.png` |
+| 5. 锚点分析 | 读真题/作业 → 提取所有题型 | 考点频次表 |
+| 6. 反向追溯 | 真题考点 → 课本例题 + PPT页 | 章节-考点-例题映射 |
+| 7. 生成文档 | 按章写 5 类文件 + 总索引 | `ai复习/*.md` |
+| 8. PDF/webapp | 按用户选择输出 | `_pdf/*.pdf` 或 webapp 提示 |
 
 完整流程见 [references/workflow.md](references/workflow.md)。
 
@@ -90,6 +92,7 @@ license: MIT
 | **电路图提取（扫描版PDF）** | `PyMuPDF page.get_pixmap(dpi=200, clip=rect)` | 整页或裁剪区域→PNG |
 | **电路图提取（文字版PDF）** | `PyMuPDF page.get_images()` 提取嵌入位图 | 矢量图仍需 pixmap |
 | **PPT 图片提取** | `python-pptx` 遍历 shapes → 保存 image.blob | EMF/PNG 均可 |
+| **MD → PDF（新增）** | Pandoc + XeLaTeX → `scripts/md2pdf.sh` | 需安装 Pandoc + TeX Live |
 | 思维导图 | Mermaid（简单）/ Obsidian Canvas（中等）/ Project Graph（复杂） | 默认 Mermaid |
 
 ---
@@ -101,13 +104,30 @@ license: MIT
 
 执行：
 1. 扫描文件夹 → 识别复习重点.txt（P0考纲）、2 份真题（P0题源）、8 份PPT+1份PDF（P1知识）
-2. 批量提取 PPT/Word 文本到 `_extracted/`
-3. 读复习重点 → 列出 6 大考点章节
-4. 读真题 → 每题打标签归入章节
-5. 按章节生成 5 类文件，最后写 00_总索引.md
-6. 提示用户启动 webapp 训练器（可选）：`cd webapp && python -m http.server 8000`
+2. **确认输出格式**：询问用户选择生成哪些输出（见下方"输出格式选择"）
+3. 批量提取 PPT/Word 文本到 `_extracted/`
+4. 读复习重点 → 列出 6 大考点章节
+5. 读真题 → 每题打标签归入章节
+6. 按章节生成 5 类文件，最后写 00_总索引.md
+7. （若选 PDF）执行 `scripts/md2pdf.sh` 把 MD 转为 PDF
+8. （若选 webapp）提示用户启动 webapp 训练器
 
 完整执行剧本见 [references/workflow.md](references/workflow.md)。
+
+---
+
+## 输出格式选择
+
+资料盘点完成后，**必须询问用户**想要哪种输出格式：
+
+| 选项 | 产出 | 适合场景 |
+|------|------|---------|
+| A. 仅 Markdown | `ai复习/*.md`（用 Obsidian/Typora/VS Code 阅读） | 纯阅读 + 自己加笔记 |
+| B. Markdown + PDF | MD + `_pdf/*.pdf`（Pandoc + XeLaTeX 编译） | 公式排版要求高 / 打印纸质版 |
+| C. Markdown + webapp | MD + 提示启动 webapp 训练器 | 交互训练 + 错题追踪 |
+| **D. 全部（默认）** | MD + PDF + webapp 提示 | 推荐：最完整 |
+
+**PDF 依赖**：选 B 或 D 时，需要本机安装 Pandoc + TeX Live（详见 [SETUP.md](SETUP.md)）。未安装则跳过 PDF 步骤并提醒用户。
 
 ---
 
@@ -117,7 +137,8 @@ license: MIT
 
 | 视图 | 功能 |
 |------|------|
-| 仪表盘 | 总览统计 + 各章掌握度 + 错题清单（每条可点 🤖 让 AI 讲解）|
+| 仪表盘 | 总览统计 + 各章掌握度（可展开预览考点）+ 错题清单（每条可点 🤖 让 AI 讲解）|
+| 📖 知识总览 | 考点清单 / 例题精讲 / 真题映射的**完整 Markdown 渲染**阅读（折叠式），支持星级筛选和搜索 |
 | 知识地图 | Cytoscape.js + HTML 索引卡节点（带胶带/进度环/手帐倾斜），节点颜色按正确率 |
 | 自测 | 一题一屏 + 自测/例题双 tab + 折叠答案 + AI 讲解 + 键盘快捷键（J答对/K答错）|
 | 公式速查 | 手帐风纸卡 + 胶带配色（必背粉/熟悉黄/了解蓝）+ Anki 3D 翻转背诵 |
