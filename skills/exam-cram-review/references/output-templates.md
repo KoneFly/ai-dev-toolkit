@@ -1,18 +1,20 @@
 # 输出文档模板规范
 
-每章一个目录，固定 5 类文件。**不要增减文件数量**——主人形成肌肉记忆后能快速跳转。
+## 文件结构
 
-## 模板文件参考
+以 webapp 网页端为核心阅读界面。每章生成 3 个精简 MD + 根目录 1 个 data.json。
 
-实际模板在 `templates/` 目录下，包含占位符 `{{xxx}}`。
+### 默认方案：3 文件/章 + data.json
 
-| 文件 | 模板 | 用途 |
-|------|------|------|
-| 01_考点清单 | [keypoints.md](../templates/keypoints.md) | 该章考什么 |
-| 02_例题精讲 | [examples.md](../templates/examples.md) | 老师指定例题 + 真题对应例题 |
-| 03_公式手卡 | [formulas.md](../templates/formulas.md) | 考场对照速查 |
-| 04_真题映射 | [exam-mapping.md](../templates/exam-mapping.md) | 真题 → 考点 → 例题 |
-| 05_自测 | [self-test.md](../templates/self-test.md) | 隐藏答案的练习 |
+| 文件 | 内容（合并来源） |
+|------|----------------|
+| 讲解.md | 考点清单（★级标注）+ 例题精讲（合并原 01+02） |
+| 题库.md | 真题映射 + 自测题（合并原 04+05） |
+| 速查.md | 公式手卡（= 原 03，H2 详细块 + 速查表） |
+
+**data.json**：webapp 的结构化主数据源。parser 优先读取，跳过 MD 正则解析。
+
+**MD 默认精简**：不追求 Obsidian 排版（无双链、无 Callout 美化），省 token。用户明确要求「看 MD/打印」时才追加规整排版。
 
 ---
 
@@ -117,12 +119,11 @@ graph LR
 ```
 {输出目录}/
 ├── 00_总索引.md
+├── data.json                  ← webapp 结构化主数据源
 ├── 01_第1章_MOS器件/
-│   ├── 01_考点清单.md
-│   ├── 02_例题精讲.md
-│   ├── 03_公式手卡.md
-│   ├── 04_真题映射.md
-│   ├── 05_自测.md
+│   ├── 讲解.md                ← 考点清单 + 例题精讲
+│   ├── 题库.md                ← 真题映射 + 自测题
+│   ├── 速查.md                ← 公式手卡
 │   └── _figures/              ← 本章关键电路图（PNG）
 │       ├── fig_电路拓扑_xxx.png
 │       ├── fig_小信号_xxx.png
@@ -137,3 +138,57 @@ graph LR
 - 格式：`{课本章号两位}_第{N}章_{标题}`（如 `07_第7章_噪声`）
 - 不用空格，用下划线
 - 不用 emoji（污染 Obsidian 大纲）
+
+---
+
+## data.json Schema
+
+webapp parser.js 优先读取此文件。字段与 `App.state.chapters` 完全对齐：
+
+```jsonc
+{
+  "version": 1,                      // schema 版本号
+  "vaultName": "模集复习",           // 显示在 webapp 顶栏
+  "generatedAt": "2026-07-26",       // 生成日期
+  "masterIndexContent": "...",       // 00_总索引的 mermaid 原文（供 deps 兜底解析）
+  "chapters": {
+    "01": {
+      "id": "01",
+      "slug": "01_第1章_MOS器件",
+      "number": 1,
+      "name": "第1章 MOS器件",
+      "star": 3,                     // 章节重要性 1-5
+      "keypoints": [
+        {"number": 1, "title": "NMOS/PMOS 工作原理", "star": 3, "body": "markdown..."}
+      ],
+      "examples": [
+        {"title": "例1.1（书本 P55）", "body": "markdown..."}
+      ],
+      "formulas": [
+        {
+          "name": "饱和区电流方程",
+          "formula": "$$ I_D = \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_{GS}-V_{th})^2 $$",
+          "condition": "饱和区",
+          "note": "萨氏方程",
+          "importance": "must",       // "must"|"familiar"|"know"|"normal"
+          "meaning": "描述 MOS 管饱和区漏极电流与栅源电压的关系",
+          "derivation": "由沟道电荷密度对 V_DS 积分推得",
+          "application": "几乎所有放大器增益计算的入口",
+          "related": "见 公式 1.2、公式 2.1"
+        }
+      ],
+      "quizQuestions": [
+        {"title": "自测1", "question": "题干 markdown", "answer": "答案 markdown"}
+      ],
+      "examMapping": "真题映射 markdown 原文",
+      "deps": ["01"],               // 上游依赖章节 id
+      "depTypes": {"02": "tool"},    // dependency | tool
+      "files": {                     // 编辑器跳转用
+        "讲解.md": "01_第1章_MOS器件/讲解.md",
+        "题库.md": "01_第1章_MOS器件/题库.md",
+        "速查.md": "01_第1章_MOS器件/速查.md"
+      }
+    }
+  }
+}
+```

@@ -14,13 +14,11 @@ license: MIT
 | 步骤 | 命令/动作 | 关键产物 |
 |------|----------|---------|
 | 1. 扫描资料 | Glob `*.pdf` `*.ppt*` `*.doc*` `*.txt` `*.md` | 资料清单+分类 |
-| 2. 确认输出格式 | 询问用户：MD / PDF / webapp 中选 | 产出方式 |
-| 3. 提取文本 | `soffice --convert-to pptx`+`python -m markitdown` | `_extracted/*.md` |
-| 4. 提取电路图 | PyMuPDF pixmap / python-pptx image.blob | `_figures/*.png` |
-| 5. 锚点分析 | 读真题/作业 → 提取所有题型 | 考点频次表 |
-| 6. 反向追溯 | 真题考点 → 课本例题 + PPT页 | 章节-考点-例题映射 |
-| 7. 生成文档 | 按章写 5 类文件 + 总索引 | `ai复习/*.md` |
-| 8. PDF/webapp | 按用户选择输出 | `_pdf/*.pdf` 或 webapp 提示 |
+| 2. 提取文本 | `soffice --convert-to pptx`+`python -m markitdown` | `_extracted/*.md` |
+| 3. 提取电路图 | PyMuPDF pixmap / python-pptx image.blob | `_figures/*.png` |
+| 4. 锚点分析 | 读真题/作业 → 提取所有题型 | 考点频次表 |
+| 5. 反向追溯 | 真题考点 → 课本例题 + PPT页 | 章节-考点-例题映射 |
+| 6. 生成文档 | 按章写 3 类 MD + data.json + 总索引 | `ai复习/*.md + data.json` |
 
 完整流程见 [references/workflow.md](references/workflow.md)。
 
@@ -53,19 +51,24 @@ license: MIT
 
 ## 输出文档结构
 
-每章生成 5 类文件 + 1 个全局索引（详见 [references/output-templates.md](references/output-templates.md)）：
+**以 webapp 网页端为核心阅读/训练界面**，MD 文件为辅助备份（默认精简，省 token）。
+
+每章生成 3 个精简 MD + 根目录 1 个 data.json：
 
 ```
 {用户指定输出目录}/
-├── 00_总索引.md              ← 含 Mermaid 章节关系图
+├── 00_总索引.md              ← 含 Mermaid 章节关系图 + 突击建议
+├── data.json                 ← webapp 主数据源（结构化，parser 优先读取）
 ├── 01_第N章_{章节名}/
-│   ├── 01_考点清单.md        ← ★★★/★★/★ 三级标注
-│   ├── 02_例题精讲.md        ← 作业例题逐题，含小信号图/解法/公式调用
-│   ├── 03_公式手卡.md        ← 高密度速查表，考场对照用
-│   ├── 04_真题映射.md        ← 历年真题 → 章节考点 → 课本例题反向索引
-│   └── 05_自测.md            ← 基于真题难度生成，答案折叠
+│   ├── 讲解.md               ← 考点清单（★级标注）+ 例题精讲（合并）
+│   ├── 题库.md               ← 真题映射 + 自测题（折叠答案）
+│   └── 速查.md               ← 公式手卡（H2 详细块 + 末尾速查表）
 └── _extracted/               ← 中间产物（PPT/Word 提取结果），可删
 ```
+
+**data.json** 是网页端的**唯一可靠数据源**。结构化字段（keypoints/examples/formulas/quizQuestions/examMapping/deps）全部写入 JSON，webapp parser 读 JSON 直接填充，**不再依赖 MD 的标题正则**。
+
+MD 文件**默认精简**（不追求 Obsidian 排版），仅当用户明确说"要看 MD/要打印/要用 Obsidian"时才生成规整版。详见 [references/output-templates.md](references/output-templates.md)。
 
 ---
 
@@ -92,7 +95,6 @@ license: MIT
 | **电路图提取（扫描版PDF）** | `PyMuPDF page.get_pixmap(dpi=200, clip=rect)` | 整页或裁剪区域→PNG |
 | **电路图提取（文字版PDF）** | `PyMuPDF page.get_images()` 提取嵌入位图 | 矢量图仍需 pixmap |
 | **PPT 图片提取** | `python-pptx` 遍历 shapes → 保存 image.blob | EMF/PNG 均可 |
-| **MD → PDF（新增）** | Pandoc + XeLaTeX → `scripts/md2pdf.sh` | 需安装 Pandoc + TeX Live |
 | 思维导图 | Mermaid（简单）/ Obsidian Canvas（中等）/ Project Graph（复杂） | 默认 Mermaid |
 
 ---
@@ -122,40 +124,36 @@ license: MIT
 
 | 选项 | 产出 | 适合场景 |
 |------|------|---------|
-| A. 仅 Markdown | `ai复习/*.md`（用 Obsidian/Typora/VS Code 阅读） | 纯阅读 + 自己加笔记 |
-| B. Markdown + PDF | MD + `_pdf/*.pdf`（Pandoc + XeLaTeX 编译） | 公式排版要求高 / 打印纸质版 |
-| C. Markdown + webapp | MD + 提示启动 webapp 训练器 | 交互训练 + 错题追踪 |
-| **D. 全部（默认）** | MD + PDF + webapp 提示 | 推荐：最完整 |
+| A. 仅精简 MD | `ai复习/*.md`（3 文件/章 + data.json） | 快速生成，以 webapp 为主 |
+| B. 精简 MD + 规整 MD | 同上 + 排版规整版（Obsidian/打印友好） | 需要独立阅读 MD |
+| **C. 默认推荐** | 精简 MD + data.json + 提示启动 webapp | 推荐：webapp 为核心 |
 
-**PDF 依赖**：选 B 或 D 时，需要本机安装 Pandoc + TeX Live（详见 [SETUP.md](SETUP.md)）。未安装则跳过 PDF 步骤并提醒用户。
+**注意**：
+- webapp 内置「🖨 导出」按钮可直接浏览器打印 PDF，**不再强依赖 Pandoc/TeX Live**
+- 选 B 时在精简 MD 基础上补充排版（双链、Obsidian Callout、详细注释），约多消耗 30% token
 
 ---
 
 ## 配套交互式训练器
 
-`webapp/` 目录提供本地静态网页训练器，给生成的 MD 复习文档加上交互层（**泛黄笔记纸主题 + 手写体**）：
+`webapp/` 目录提供本地静态网页训练器（**泛黄笔记纸主题 + 手写体**），3 个核心视图：
 
 | 视图 | 功能 |
 |------|------|
-| 仪表盘 | 总览统计 + 各章掌握度（可展开预览考点）+ 错题清单（每条可点 🤖 让 AI 讲解）|
-| 📖 知识总览 | 考点清单 / 例题精讲 / 真题映射的**完整 Markdown 渲染**阅读（折叠式），支持星级筛选和搜索 |
-| 知识地图 | Cytoscape.js + HTML 索引卡节点（带胶带/进度环/手帐倾斜），节点颜色按正确率 |
-| 自测 | 一题一屏 + 自测/例题双 tab + 折叠答案 + AI 讲解 + 键盘快捷键（J答对/K答错）|
-| 公式速查 | 手帐风纸卡 + 胶带配色（必背粉/熟悉黄/了解蓝）+ Anki 3D 翻转背诵 |
-| **✨ AI 出题** | 浏览器直连 OpenAI 兼容 API（DeepSeek/Kimi/GLM/Qwen/...），按章节材料命题，可加入题库或导出 MD |
-| 编辑器跳转 | 点击 📝 跳转到主人配置的本地 MD 编辑器（Obsidian/VS Code/Typora/...）|
+| 📊 总览 | 仪表盘（统计卡+章节掌握度+错题清单）+ 知识地图（Cytoscape HTML 索引卡节点） |
+| 📖 阅读 | 考点清单 / 题库中心（例题+真题）/ 公式速查（Anki 3D 翻转+关联高亮），三 tab 切换 |
+| ✍️ 练习 | 自测/例题/AI 题三模式 + 内嵌 AI 出题面板 + 错题 AI 讲解 + 键盘快捷键 |
 
-### 工具分工（重要）
+### 核心定位
 
-**MD 编辑器 与 webapp 是互补关系，不是替代关系**：
+**webapp 是主要阅读/训练界面**，MD 文件是结构化备份。data.json 是两者的桥梁。
 
 | 场景 | 用什么 |
 |------|--------|
-| 沉浸阅读 + 加自己笔记 | MD 编辑器（任意：Obsidian/VS Code/Typora/MarkText）|
-| 主动训练 + 错题追踪 + 进度可视化 | webapp |
-
-> 早期版本绑定 Obsidian 是因为 Obsidian Graph View 提供章节可视化；webapp 自带知识地图后，MD 阅读端已解耦——主人在 webapp 顶栏「⚙ 编辑器」按钮配置首选编辑器即可。
+| 交互训练 + 错题追踪 + 进度可视化 + AI 出题 | webapp（核心） |
+| 沉浸阅读 + 加自己笔记 | MD 编辑器（辅助，需要时再生成规整版）|
+| 打印纸质版 | webapp 内「🖨 导出」按钮 |
 
 详见 [webapp/README.md](webapp/README.md)。
 
-**何时推荐用户启动 webapp**：当生成完所有 MD 文件后，在最终汇报中提示用户可选择启动 webapp 做交互式训练（特别是 05_自测.md 题目较多时）。不要强制要求——单纯阅读 MD 在任何编辑器中也完全可行。
+**何时推荐用户启动 webapp**：生成完所有文件后，在最终汇报中**默认推荐启动 webapp**。

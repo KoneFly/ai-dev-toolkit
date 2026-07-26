@@ -22,15 +22,14 @@
 
 ```
 请选择输出格式：
-A. 仅 Markdown（Obsidian/Typora/VS Code 阅读）
-B. Markdown + PDF（Pandoc + XeLaTeX 编译，公式排版更稳定）
-C. Markdown + webapp（交互训练 + 错题追踪）
-D. 全部（MD + PDF + webapp）← 默认推荐
+A. 仅精简 MD（3 文件/章 + data.json，以 webapp 为核心阅读界面）← 默认推荐
+B. 精简 MD + 规整 MD（同上 + Obsidian/打印友好的排版版）
 ```
 
-- 用户选 B 或 D 时，检查 `pandoc --version` 和 `xelatex --version`
-- 未安装则提示："PDF 输出需要安装 Pandoc + TeX Live，详见 SETUP.md。是否跳过 PDF 先生成 MD？"
-- 记住用户选择，在阶段 5 使用
+- 默认选 A（省 token、以 webapp 网页端为核心）
+- 选 B 时在精简基础上追加排版（双链、Callout、注释），约多消耗 30% token
+- webapp 内置「🖨 导出」可直接浏览器打印 PDF，无需 Pandoc/TeX Live
+- 记住用户选择，在阶段 3 使用
 
 ---
 
@@ -86,7 +85,7 @@ done
 | **电路拓扑图** | 02_例题精讲 | 共源/共栅/差分对/cascode 原始电路 |
 | **小信号等效电路** | 02_例题精讲 | 对应拓扑的小信号模型 |
 | **I-V 特性曲线** | 01_考点清单 | MOS 三区 I-V、转移特性 |
-| **版图/结构截面** | 01_考点清单 | MOS 管截面结构（如有）|
+| **版图/结构截面** | 01_考点清单 | MOS 管截面结构（如有） |
 
 ### 提取流程
 
@@ -193,115 +192,117 @@ for slide in prs.slides:
 
 ---
 
-## 阶段 3：分章生成（每章 15-30 分钟）
+## 阶段 3：分章生成（每章 10-20 分钟）
 
-按章节循环。对每章：
+按章节循环。对每章生成 3 个 MD 文件，同时在内存中构建 data.json 所需的结构化数据。
 
-### 3.1 `01_考点清单.md`
+> **核心原则**：以 webapp 网页端为主阅读界面，MD 默认精简（省 token）。data.json 是 webapp 的唯一可靠数据源。
 
-- 用考纲层的描述作为骨架
-- 每个考点标★级
-- 列出该考点出现的真题题号（双链）
-- 列出该考点对应的课本/PPT 位置（路径+页码）
+### 3.1 `讲解.md`（考点清单 + 例题精讲，合并原 01+02）
 
-### 3.2 `02_例题精讲.md`
+**精简版**（默认）：直接列出考点和例题，无需追求 Obsidian 排版。
 
-只精讲两类题：
-- 老师明确说"作业一定要做"的例题
-- 真题中出现过的题型对应的例题
-
-每题结构：
 ```markdown
+# 第N章 {章节名}
+
+章节重要性：★★★
+
+### 1. {考点标题} ★★★
+
+{考点核心内容，1-3 段}
+
+### 2. {考点标题} ★★
+
+{考点核心内容}
+
+---
+
 ## 例 N.M（书本 P{页}）
 
 > 原题：...
 
 **考点**：{考点}（★★★）
 
-**分析**：
-1. 第一步：...
-2. 第二步：...
-
-**关键公式**：
-$$ ... $$
-
-**解答**：
-...
-
-**相关真题**：[[04_真题映射#2024B-计算1]]
+**解答**：...
 ```
 
-### 3.3 `03_公式手卡.md`
+**data.json 对应字段**：
+- `keypoints[]`: `{number, title, star, body}` — body 为考点内容的 markdown 原文
+- `examples[]`: `{title, body}` — body 为例题完整内容
 
-**两种格式并存（必须按此顺序）**：
-
-#### 主体：H2 详细公式块（必须，供 webapp Anki 模式与关联高亮使用）
-
-```markdown
-## {{公式名}}（公式 N.M，必背|熟悉|了解）
-
-$$ {{LaTeX 公式}} $$
-
-**物理含义**：1-2 句物理图像
-
-**适用条件**：xxx
-
-**推导起点**：从 公式 X.Y 推得 *— 务必含 "公式 N.M" 字样*
-
-**应用场景**：- 真题/例题中的典型应用
-
-**关联公式**：见 公式 N.M、公式 N.M+1
-```
-
-#### 末尾：速查表（可选，考场对照）
+### 3.2 `题库.md`（真题映射 + 自测题，合并原 04+05）
 
 ```markdown
-## 速查表
+# 题库
 
-| 编号 | 公式 | 条件 | 备注 |
-|------|------|------|------|
-| 1.1 | $I_D = \frac{1}{2}\mu_n C_{ox}\frac{W}{L}(V_{GS}-V_{th})^2$ | 饱和区 | 萨氏方程 |
-```
+## 真题映射
 
-**关键 Parser 兼容性要求**（必须遵守，否则 webapp 公式卡丢字段）：
-- 每条主要公式用 `## H2 标题` 包含 `（公式 N.M, 重要级）` 字段
-- `**物理含义**：` / `**适用条件**：` / `**推导起点**：` / `**应用场景**：` 必须是加粗段（parser.js extractFormulaMeta 依赖此格式）
-- 关联引用必须写成 `公式 N.M`（中间可有/无空格），parser 用正则 `公式\s*\d+\.\d+` 自动捕获
-- 重要级关键词 `必背|必记|必考|必出` 写在 H2 标题中 → webapp 显示红色徽章
-- 详细模板：见 [`templates/formulas.md`](../templates/formulas.md) 与 [`templates/formula-gen-prompt.md`](../templates/formula-gen-prompt.md)（供子代理直接复用的强化 prompt）
+### 2024-B 卷 第N章相关题
 
-### 3.4 `04_真题映射.md`
+{真题内容及解析}
 
-```markdown
-## 2024-B 卷 第N章相关题
+---
 
-### 单选 3：{题干}
+## 自测
 
-- **答案**：B
-- **考点**：[[01_考点清单#考点-X]]
-- **课本支撑**：[[课本.pdf#P{页}]]
-- **解析**：...
-
-### 计算 1：{题干}
-
-- **完整解答**：...
-- **此题对应例题**：[[02_例题精讲#例N.M]]
-```
-
-### 3.5 `05_自测.md`
-
-```markdown
-## 自测题 N.1
+### 自测 1
 
 {题干}
 
 > [!faq]- 点击展开答案
 > {答案}
-> 
-> **解析**：...
 ```
 
-题目来源：基于该章节真题改编（换数字、换方向），约 5-8 题。
+**data.json 对应字段**：
+- `examMapping`: 真题映射的 markdown 原文（整篇）
+- `quizQuestions[]`: `{title, question, answer}` — 从自测题解析
+
+### 3.3 `速查.md`（公式手卡，= 原 03）
+
+格式与之前 `03_公式手卡.md` 完全一致（H2 详细块 + 末尾速查表）。
+
+**data.json 对应字段**：
+- `formulas[]`: `{name, formula, condition, note, importance, meaning, derivation, application, related}`
+
+详细模板见 [`templates/formulas.md`](../templates/formulas.md)。
+
+### 3.6 写 data.json（阶段 3 末尾，所有章节生成完毕后）
+
+将内存中构建的章节结构序列化为 `{输出目录}/data.json`：
+
+```json
+{
+  "version": 1,
+  "vaultName": "{科目名}",
+  "generatedAt": "2026-07-26",
+  "masterIndexContent": "(00_总索引.md 的 mermaid 原文，供 webapp 解析 deps)",
+  "chapters": {
+    "01": {
+      "id": "01",
+      "slug": "01_第1章_MOS器件",
+      "number": 1,
+      "name": "第1章 MOS器件",
+      "star": 3,
+      "keypoints": [{"number": 1, "title": "...", "star": 3, "body": "markdown"}],
+      "examples": [{"title": "例1.1", "body": "markdown"}],
+      "formulas": [{"name": "...", "formula": "$$...$$", "condition": "...", "note": "...",
+                     "importance": "must", "meaning": "...", "derivation": "...",
+                     "application": "...", "related": "..."}],
+      "quizQuestions": [{"title": "自测1", "question": "md", "answer": "md"}],
+      "examMapping": "markdown 字符串",
+      "deps": ["01"],
+      "depTypes": {"02": "tool"},
+      "files": {"讲解.md": "01_第1章_MOS器件/讲解.md", "题库.md": "...", "速查.md": "..."}
+    }
+  }
+}
+```
+
+**关键**：
+- 每个字段**直接结构化写入**，不依赖 MD 正则解析
+- `formulas[].importance` 必须是 `"must"|"familiar"|"know"|"normal"` 之一
+- `files` 字段用于 webapp 的「在编辑器中打开」功能
+- webapp parser.js 优先读此文件，读到后**跳过全部 MD 解析**
 
 ---
 
@@ -338,9 +339,9 @@ graph LR
 
 | 剩余天数 | 重点 |
 |----------|------|
-| ≤2 天 | 只看 03_公式手卡 + 04_真题映射 |
-| 3-5 天 | 加 01_考点清单 + 02_例题精讲（仅★★★） |
-| 6+ 天 | 全部 + 05_自测 |
+| ≤2 天 | 只看 速查.md（公式）+ webapp 公式 Anki 模式 |
+| 3-5 天 | 加 讲解.md（仅★★★考点）+ webapp 自测 |
+| 6+ 天 | 全部 + webapp AI 出题扩展练习 |
 ```
 
 ---
@@ -349,31 +350,26 @@ graph LR
 
 - 报告生成文件数、字数、覆盖的考点数
 - 列出**未覆盖的资料**（被跳过的 PPT 页/PDF 章）并说明理由
-- 提供 Obsidian 打开命令：`obsidian://open?vault={vault}&file=00_总索引.md`
+- **默认推荐启动 webapp**
 
-### 5.1 PDF 编译（若用户在阶段 0.5 选择了 B 或 D）
-
-```bash
-# 检查依赖
-pandoc --version && xelatex --version
-
-# 执行批量转换
-bash ~/.claude/skills/exam-cram-review/scripts/md2pdf.sh "{输出目录}"
-# PDF 输出到 {输出目录}/_pdf/
-```
-
-- 每章的 5 个 MD 合并为 1 个 PDF（按 01-05 编号排序）
-- 使用 `templates/pandoc-header.tex` 配置中文字体（SimSun）+ 数学公式包
-- 若 Pandoc/XeLaTeX 未安装，打印提示并跳过（不阻塞 MD 交付）
-- 编译失败的章节单独报告（常见原因：不支持的 Mermaid 图表 → 建议手动删除后重试）
-
-### 5.2 webapp 提示（若用户选择了 C 或 D）
+### 5.1 webapp 提示（默认）
 
 ```
-如需交互式训练，启动网页训练器：
+复习文档已生成！推荐启动网页训练器：
 cd {skill目录}/webapp && python -m http.server 8000
 浏览器访问 http://localhost:8000，选择 {输出目录}
+
+webapp 提供：📊 总览 / 📖 阅读 / ✍️ 练习（含 AI 出题）
+内置「🖨 导出」按钮可直接打印 PDF
 ```
+
+### 5.2 规整 MD 补充（若用户在阶段 0.5 选择了 B）
+
+在精简 MD 基础上，对每章 3 个文件追加：
+- Obsidian 双链（`[[讲解#考点名]]`、`[[题库#真题ID]]`）
+- Callout 折叠答案格式
+- 注释补充、段落排版美化
+- 不改变文件结构，仅增强可读性
 
 ---
 
