@@ -8,9 +8,10 @@
 
   const KnowledgeView = {};
   let currentChId = null;
-  let currentTab = 'keypoints'; // 'keypoints' | 'examples' | 'examMapping'
+  let currentTab = 'keypoints'; // 'keypoints' | 'questions'
   let searchQuery = '';
   let starFilter = 0; // 0 = 全部, 1-5 = 对应星级
+  let questionSubTab = 'examples'; // 'examples' | 'examMapping'
 
   KnowledgeView.render = function (chId) {
     renderSidebar();
@@ -83,10 +84,8 @@
 
     if (currentTab === 'keypoints') {
       renderKeypoints(mount, ch);
-    } else if (currentTab === 'examples') {
-      renderExamples(mount, ch);
-    } else if (currentTab === 'examMapping') {
-      renderExamMapping(mount, ch);
+    } else if (currentTab === 'questions') {
+      renderQuestions(mount, ch);
     }
 
     renderMath(mount);
@@ -155,6 +154,47 @@
 
       mount.appendChild(card);
     }
+  }
+
+  /* ============== 题库中心（例题 + 真题合并） ============== */
+  function renderQuestions(mount, ch) {
+    // 二级分类 pill
+    const toolbar = document.createElement('div');
+    toolbar.className = 'knowledge-sub-tabs';
+    const exCount = (ch.examples || []).length;
+    const hasMapping = !!(ch.examMapping && ch.examMapping.trim());
+    toolbar.innerHTML = `
+      <button class="sub-tab ${questionSubTab === 'examples' ? 'active' : ''}" data-sub="examples">📝 例题 (${exCount})</button>
+      <button class="sub-tab ${questionSubTab === 'examMapping' ? 'active' : ''}" data-sub="examMapping">🎯 真题${hasMapping ? '' : ' (无)'}</button>
+    `;
+    toolbar.querySelectorAll('.sub-tab').forEach(btn => {
+      btn.onclick = () => {
+        questionSubTab = btn.dataset.sub;
+        renderContent();
+      };
+    });
+    mount.appendChild(toolbar);
+
+    // 渲染对应内容
+    const contentWrap = document.createElement('div');
+    if (questionSubTab === 'examples') {
+      renderExamples(contentWrap, ch);
+    } else {
+      renderExamMapping(contentWrap, ch);
+    }
+    mount.appendChild(contentWrap);
+
+    // 底部 AI 出题入口
+    const aiEntry = document.createElement('div');
+    aiEntry.className = 'knowledge-ai-entry';
+    aiEntry.innerHTML = `
+      <button class="primary" id="knowledge-ai-btn">✨ AI 出更多题</button>
+      <span class="knowledge-ai-hint">基于本章材料，用 AI 自动命制练习题</span>
+    `;
+    aiEntry.querySelector('#knowledge-ai-btn').onclick = () => {
+      App.switchView('ai');
+    };
+    mount.appendChild(aiEntry);
   }
 
   /* ============== 例题精讲渲染 ============== */

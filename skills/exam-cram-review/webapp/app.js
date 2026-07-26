@@ -157,6 +157,9 @@ const App = (function () {
     // 顶栏编辑器配置按钮
     document.getElementById('editor-config').onclick = () => Editor.showSettingsDialog();
 
+    // 顶栏导出 PDF 按钮
+    document.getElementById('export-pdf').onclick = () => PrintView.showExportDialog();
+
     // 顶栏换库按钮
     const swapInput = document.getElementById('swap-vault-input');
     document.getElementById('swap-vault').onclick = () => {

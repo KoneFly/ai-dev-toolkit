@@ -37,6 +37,7 @@
       <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
     </div>
     <button id="editor-config" class="ghost" title="配置首选编辑器">⚙ 编辑器</button>
+    <button id="export-pdf" class="ghost" title="导出 PDF / 打印">🖨 导出</button>
     <button id="swap-vault" class="ghost" title="重新选择复习目录">📁 换库</button>
     <input type="file" id="swap-vault-input" webkitdirectory directory multiple style="display:none">
   </header>
@@ -124,8 +125,7 @@
         <div class="knowledge-toolbar">
           <div id="knowledge-tabs" class="knowledge-tabs">
             <button data-tab="keypoints" class="active">📋 考点清单</button>
-            <button data-tab="examples">📝 例题精讲</button>
-            <button data-tab="examMapping">🎯 真题映射</button>
+            <button data-tab="questions">📝 题库中心</button>
           </div>
           <div id="knowledge-star-filter" class="knowledge-star-filter">
             <button data-star="0" class="active">全部</button>
@@ -337,6 +337,9 @@
   <!-- 通用 Toast -->
   <div id="toast" hidden></div>
 
+  <!-- 打印区域（@media screen 时隐藏，打印时显示） -->
+  <div id="print-area" class="print-only"></div>
+
   <!-- 应用脚本 -->
   <script src="parser.js"></script>
   <script src="storage.js"></script>
@@ -348,6 +351,7 @@
   <script src="views/quiz.js"></script>
   <script src="views/formula.js"></script>
   <script src="views/ai.js"></script>
+  <script src="views/print.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
