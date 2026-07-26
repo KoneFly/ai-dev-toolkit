@@ -2089,6 +2089,99 @@ code {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(120, 80, 30, 0.35); }
 
+/* ============== 总览视图分层布局 ============== */
+.overview-stats { padding-bottom: 16px; }
+.overview-map-title {
+  font-size: 17px;
+  color: var(--ink);
+  border-left: 4px solid var(--ink-blue);
+  padding-left: 10px;
+  margin: 0 22px 0;
+}
+#view-overview .map-shell { height: 65vh; }
+#view-overview #cy-container { height: 100%; }
+
+/* ============== 阅读视图 tab 导航（公式 section 内也放一份） ============== */
+.read-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 22px;
+  background: var(--paper-card);
+  border-bottom: 1px solid var(--border-soft);
+}
+.read-tabs button {
+  border: 1.5px solid var(--border-strong);
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--paper-card);
+  box-shadow: none;
+}
+.read-tabs button.active {
+  background: var(--ink);
+  color: var(--paper-base);
+  border-color: var(--ink);
+}
+
+/* ============== 练习视图 AI 出题面板 ============== */
+.quiz-ai-panel {
+  background: var(--paper-card);
+  border: 1px dashed var(--ink-blue);
+  border-radius: var(--radius-lg);
+  padding: 16px 22px;
+  margin-bottom: 18px;
+}
+.quiz-ai-controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.quiz-ai-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.quiz-ai-controls select, .quiz-ai-controls input[type="number"] {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: rgba(255, 250, 230, 0.45);
+  font-family: var(--font-cn);
+  color: var(--ink);
+  min-width: 80px;
+}
+.quiz-ai-controls input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: rgba(255, 250, 230, 0.45);
+  font-family: var(--font-cn);
+  color: var(--ink);
+}
+.quiz-ai-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.quiz-ai-status.ok { color: var(--ink-green); }
+.quiz-ai-status.warn { color: var(--ink-red); }
+.quiz-ai-status .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.quiz-ai-progress { margin-top: 8px; font-size: 13px; }
+
 /* ============== 打印模式按钮 ============== */
 .print-modes {
   display: flex;

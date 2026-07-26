@@ -31,6 +31,24 @@
    * @returns {Promise<{chapters: Object, master: Object}>}
    */
   Parser.parseFromFiles = async function (files) {
+    // 优先路径：若目录含 data.json，直接反序列化（skill 生成的结构化主数据源）
+    for (const f of files) {
+      const path = f.webkitRelativePath || f.name;
+      if (path.endsWith('data.json') && path.split('/').length <= 2) {
+        try {
+          const json = JSON.parse(await readText(f));
+          if (json && json.chapters) {
+            return {
+              chapters: json.chapters,
+              masterIndexContent: json.masterIndexContent || ''
+            };
+          }
+        } catch (e) {
+          console.warn('data.json 解析失败，回退 MD 解析：', e);
+        }
+      }
+    }
+
     const chapters = {};
     let masterIndexContent = '';
 

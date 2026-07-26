@@ -27,22 +27,28 @@ const App = (function () {
   };
 
   /* ============== 视图切换 ============== */
+  // 旧视图名 → 新的 3 大视图（保证旧的 switchView 调用点无需逐个改）
+  const VIEW_ALIAS = {
+    dashboard: 'overview', map: 'overview',
+    knowledge: 'read', formula: 'read',
+    quiz: 'practice', ai: 'practice'
+  };
+
   App.switchView = function (name) {
+    name = VIEW_ALIAS[name] || name;
     App.currentView = name;
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-    document.getElementById(`view-${name}`).classList.add('active');
+    const target = document.getElementById(`view-${name}`);
+    if (target) target.classList.add('active');
     document.querySelectorAll('.view-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === name);
     });
     App.state.lastView = name;
     AppStorage.save(App.state);
 
-    if (name === 'dashboard') DashboardView.render();
-    else if (name === 'knowledge') KnowledgeView.render();
-    else if (name === 'map') MapView.render();
-    else if (name === 'quiz') QuizView.render();
-    else if (name === 'formula') FormulaView.render();
-    else if (name === 'ai') AIView.render();
+    if (name === 'overview') OverviewView.render();
+    else if (name === 'read') ReadView.render();
+    else if (name === 'practice') PracticeView.render();
   };
 
   /* ============== 跨视图跳转 ============== */
@@ -187,6 +193,8 @@ const App = (function () {
     if (MapView.bind) MapView.bind();
     if (KnowledgeView.bind) KnowledgeView.bind();
     if (AIView.bind) AIView.bind();
+    if (ReadView.bind) ReadView.bind();
+    if (PracticeView.bind) PracticeView.bind();
     document.getElementById('map-fit').onclick = () => MapView.fit();
 
     // 如果有缓存的章节数据，跳过启动屏
@@ -194,7 +202,7 @@ const App = (function () {
       document.getElementById('vault-name').textContent =
         `· ${App.state.vaultName} · ${Object.keys(App.state.chapters).length}章`;
       document.getElementById('splash').classList.remove('active');
-      App.switchView(App.state.lastView || 'dashboard');
+      App.switchView(App.state.lastView || 'overview');
       refreshProgress();
     }
   }

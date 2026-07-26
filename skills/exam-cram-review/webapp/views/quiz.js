@@ -10,7 +10,7 @@
   let currentIdx = 0;
   let order = [];               // 当前题序（可被打乱）
   let shuffled = false;
-  let mode = 'quiz';            // 'quiz' = 05_自测题, 'example' = 02_例题练习
+  let mode = 'quiz';            // 'quiz' = 05_自测题, 'example' = 02_例题练习, 'ai' = AI 题库
 
   QuizView.render = function (chId, qIdx) {
     renderSidebar();
@@ -19,15 +19,28 @@
     } else if (currentChId) {
       renderQuestion();
     } else {
-      // 默认选第一个有题目的章节
       const list = Object.values(App.state.chapters).sort((a, b) => a.number - b.number);
       const first = list.find(c => getItems(c).length > 0);
       if (first) selectChapter(first.id, 0);
     }
   };
 
+  QuizView.getCurrentChId = function () { return currentChId; };
+  QuizView.getMode = function () { return mode; };
+
   function getItems(chapter) {
     if (mode === 'quiz') return chapter.quizQuestions;
+    if (mode === 'ai') {
+      const bank = App.state.aiQuestionBank || {};
+      const chBank = bank[chapter.id];
+      if (!chBank || !chBank.questions || !chBank.questions.length) return [];
+      return chBank.questions.map(q => ({
+        title: q.title || 'AI 题',
+        question: q.question,
+        answer: q.answer,
+        isAI: true
+      }));
+    }
     return chapter.examples.map(ex => ({
       title: ex.title,
       question: extractQuestionFromExample(ex.body),
@@ -83,7 +96,7 @@
     const items = ch ? getItems(ch) : [];
     if (!ch || items.length === 0) {
       document.getElementById('quiz-question').textContent =
-        mode === 'example' ? '本章无例题' : '本章无自测题';
+        mode === 'example' ? '本章无例题' : mode === 'ai' ? '本章无 AI 题（点右上角 ✨ 生成）' : '本章无自测题';
       return;
     }
     const realIdx = order[currentIdx];
@@ -103,7 +116,7 @@
     document.getElementById('quiz-judge').hidden = true;
     const revealBtn = document.getElementById('quiz-reveal');
     revealBtn.disabled = false;
-    revealBtn.textContent = q.isExample ? '查看完整解析' : '显示答案';
+    revealBtn.textContent = q.isExample ? '查看完整解析' : q.isAI ? '查看 AI 解析' : '显示答案';
 
     // 已判分则标记（自测和例题分开存）
     const masteryKey = mode === 'example' ? `e-${realIdx}` : `q-${realIdx}`;
@@ -193,8 +206,10 @@
   function switchMode(newMode) {
     if (mode === newMode) return;
     mode = newMode;
-    document.getElementById('quiz-mode-quiz').classList.toggle('active', mode === 'quiz');
-    document.getElementById('quiz-mode-example').classList.toggle('active', mode === 'example');
+    document.querySelectorAll('.quiz-mode-switch button').forEach(btn => {
+      const btnMode = btn.id.replace('quiz-mode-', '');
+      btn.classList.toggle('active', btnMode === mode);
+    });
     // 重新选择当前章节，用新模式渲染
     const ch = App.state.chapters[currentChId];
     if (ch) {
@@ -239,12 +254,14 @@
     document.getElementById('quiz-shuffle').onclick = toggleShuffle;
     document.getElementById('quiz-mode-quiz').onclick = () => switchMode('quiz');
     document.getElementById('quiz-mode-example').onclick = () => switchMode('example');
+    const aiModeBtn = document.getElementById('quiz-mode-ai');
+    if (aiModeBtn) aiModeBtn.onclick = () => switchMode('ai');
     document.querySelectorAll('#quiz-judge button').forEach(btn => {
       btn.onclick = () => judge(btn.dataset.judge);
     });
     // 键盘快捷键
     document.addEventListener('keydown', e => {
-      if (document.getElementById('view-quiz').classList.contains('active')) {
+      if (document.getElementById('view-practice').classList.contains('active')) {
         if (e.key === ' ') { e.preventDefault(); reveal(); }
         else if (e.key === 'ArrowRight' || e.key === 'd') navigate(1);
         else if (e.key === 'ArrowLeft' || e.key === 'a') navigate(-1);
