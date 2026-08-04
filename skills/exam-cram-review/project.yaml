@@ -1,0 +1,23 @@
+name: exam-cram-review
+authors: [KoneFly]
+category: Agent
+tags: [Claude Code Skill, 期末复习, AI出题, 知识地图, Anki, 零构建webapp]
+status: done
+updated: 2026-07-26
+summary: 期末突击复习 AI Skill — 从课本/PPT/真题反向工程生成复习笔记，配套泛黄笔记纸主题网页训练器（AI出题/知识地图/Anki公式背诵）
+
+logo: assets/logo.jpg
+readme: README.md
+
+links:
+  video: https://github.com/KoneFly/ai-dev-toolkit/tree/master/skills/exam-cram-review/webapp
+
+subskills:
+  - name: webapp
+    status: stable
+    path: skills/exam-cram-review/webapp
+    summary: 泛黄笔记纸主题网页训练器 — 总览/阅读/练习三视图，含AI出题、Anki公式背诵、知识地图
+  - name: skill-generator
+    status: stable
+    path: skills/exam-cram-review
+    summary: Claude Code Skill 生成端 — 从课本PDF/PPT/真题反向工程生成结构化复习文档+data.json
