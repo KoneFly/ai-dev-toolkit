@@ -70,19 +70,20 @@
    * @param {Function} onDelta - 每收到一段 delta 文本调用
    * @param {Function} onDone - 完成时调用，参数为完整文本
    * @param {Function} onError - 出错时调用
-   * @returns {AbortController} 可用于中止请求
+   * @param {AbortController} controller - 可选，由调用方提前创建以便在流结束前取消
+   * @returns {Promise<AbortController>} 流处理结束后返回控制器，保留原有 await 调用方式
    */
-  AIClient.streamChat = async function (messages, onDelta, onDone, onError) {
+  AIClient.streamChat = async function (messages, onDelta, onDone, onError, controller = new AbortController()) {
     const cfg = AIClient.loadConfig();
     if (!cfg.apiKey || !cfg.baseURL || !cfg.model) {
       onError(new Error('AI 配置未完成，请先配置 API Key / Base URL / Model'));
       return null;
     }
 
-    const controller = new AbortController();
     let fullText = '';
 
     try {
+      controller.signal.throwIfAborted();
       const url = cfg.baseURL.replace(/\/$/, '') + '/chat/completions';
       const resp = await fetch(url, {
         method: 'POST',
@@ -111,6 +112,7 @@
 
       while (true) {
         const { value, done } = await reader.read();
+        controller.signal.throwIfAborted();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
@@ -136,10 +138,13 @@
         }
       }
 
+      controller.signal.throwIfAborted();
       onDone(fullText);
     } catch (e) {
-      if (e.name === 'AbortError') {
-        onError(new Error('用户已中止请求'));
+      if (controller.signal.aborted || e.name === 'AbortError') {
+        const error = new Error('用户已中止请求');
+        error.name = 'AbortError';
+        onError(error);
       } else {
         onError(e);
       }

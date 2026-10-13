@@ -7,6 +7,7 @@
   'use strict';
 
   const PracticeView = {};
+  let currentGeneration = null;
   const QUESTION_TYPES = ['计算题', '概念题', '选择题', '简答题', '证明题', '综合题'];
 
   PracticeView.render = function (chId, qIdx) {
@@ -41,6 +42,16 @@
 
   /* ============== AI 出题面板逻辑 ============== */
   async function runAIGeneration() {
+    if (currentGeneration) {
+      currentGeneration.abort();
+      currentGeneration = null;
+      const runBtn = document.getElementById('quiz-ai-run');
+      runBtn.textContent = '生成并加入练习';
+      document.getElementById('quiz-ai-progress').textContent = '已停止生成，已加入题库的题目保留。';
+      updateAIBadge();
+      App.showToast('已停止生成');
+      return;
+    }
     if (!global.AIClient || !AIClient.isConfigured()) {
       App.showToast('请先配置 AI API');
       if (global.AIView) AIView.showConfigDialog();
@@ -81,15 +92,17 @@
       return;
     }
 
-    runBtn.textContent = '⏳ 生成中...';
-    runBtn.disabled = true;
+    const controller = new AbortController();
+    currentGeneration = controller;
+    const isActive = () => currentGeneration === controller && !controller.signal.aborted;
+    runBtn.textContent = '⏸ 停止生成';
     progressEl.innerHTML = '<div style="color:var(--ink-soft);">⏳ AI 正在命题...</div>';
 
     const messages = AIClient.buildQuestionPrompt({ sources, questionType: questionType, difficulty, count, extraHint: extra });
 
     let generated = 0;
     const parser = AIClient.createStreamParser((q) => {
-      if (!q) return;
+      if (!q || !isActive()) return;
       generated++;
       progressEl.innerHTML = `<div style="color:var(--ink-soft);">已生成 ${generated} / ${count} 题</div>`;
 
@@ -104,32 +117,39 @@
       AppStorage.save(App.state);
     });
 
-    await AIClient.streamChat(
-      messages,
-      (delta) => { parser.feed(delta); },
-      () => {
-        parser.flush();
-        runBtn.textContent = '生成并加入练习';
-        runBtn.disabled = false;
-        if (generated > 0) {
-          progressEl.innerHTML = `<div style="color:var(--ink-green);">✓ 已生成 ${generated} 题并加入 AI 题库</div>`;
-          App.showToast(`✓ ${generated} 道 AI 题已加入练习`);
-          updateAIBadge();
-          // 如果当前在 AI 题模式，刷新题目列表
-          if (QuizView.getMode && QuizView.getMode() === 'ai') {
-            QuizView.render(chId);
+    try {
+      await AIClient.streamChat(
+        messages,
+        (delta) => { if (isActive()) parser.feed(delta); },
+        () => {
+          if (!isActive()) return;
+          parser.flush();
+          if (generated > 0) {
+            progressEl.innerHTML = `<div style="color:var(--ink-green);">✓ 已生成 ${generated} 题并加入 AI 题库</div>`;
+            App.showToast(`✓ ${generated} 道 AI 题已加入练习`);
+            updateAIBadge();
+            // 如果当前在 AI 题模式，刷新题目列表
+            if (QuizView.getMode && QuizView.getMode() === 'ai') {
+              QuizView.render(chId);
+            }
+          } else {
+            progressEl.innerHTML = `<div style="color:var(--ink-red);">⚠️ 未能生成任何题目</div>`;
           }
-        } else {
-          progressEl.innerHTML = `<div style="color:var(--ink-red);">⚠️ 未能生成任何题目</div>`;
-        }
-      },
-      (err) => {
-        parser.flush();
+        },
+        (err) => {
+          if (!isActive() || err.name === 'AbortError') return;
+          parser.flush();
+          progressEl.textContent = `⚠️ ${err.message}`;
+        },
+        controller
+      );
+    } finally {
+      // 取消后可以立即重试，旧请求的收尾不能重置新请求的按钮。
+      if (currentGeneration === controller) {
+        currentGeneration = null;
         runBtn.textContent = '生成并加入练习';
-        runBtn.disabled = false;
-        progressEl.innerHTML = `<div style="color:var(--ink-red);">⚠️ ${err.message}</div>`;
       }
-    );
+    }
   }
 
   function reconstructSourceFromKey(ch, key) {
